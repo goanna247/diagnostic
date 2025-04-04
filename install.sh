@@ -5,6 +5,53 @@
 
 # Exit if any command fails
 set -e
+set -u  # Treat unset variables as errors
+set -o pipefail
+
+BLUEZ_DIR="$HOME/bluez-5.80"
+BUILD_DIR="build"
+
+info() {
+  echo -e "\033[1;34m[INFO]\033[0m $1"
+}
+
+error() {
+  echo -e "\033[1;31m[ERROR]\033[0m $1" >&2
+  exit 1
+}
+
+# --- Step 1: Check BlueZ directory exists ---
+if [ ! -d "$BLUEZ_DIR" ]; then
+  error "BlueZ source directory not found at: $BLUEZ_DIR"
+fi
+
+# --- Step 2: Build BlueZ if static libraries are missing ---
+cd "$BLUEZ_DIR"
+
+
+if [ ! -f "gdbus/.libs/libgdbus-internal.a" ] || [ ! -f "src/.libs/libshared-mainloop.a" ]; then
+  info "Building BlueZ (missing static libraries)..."
+  ./configure || error "BlueZ configure failed."
+  make -j"$(nproc)" || error "BlueZ build failed."
+else
+  info "BlueZ static libraries found, skipping build."
+fi
+
+cd - > /dev/null || exit 1
+
+# --- Step 3: Clean previous CMake build ---
+info "Removing old build directory..."
+rm -rf "$BUILD_DIR"
+
+# --- Step 4: Configure CMake ---
+info "Running CMake configure..."
+cmake -B"$BUILD_DIR" -S. || error "CMake configure failed."
+
+# --- Step 5: Build project ---
+info "Building project..."
+cmake --build "$BUILD_DIR" -- -j"$(nproc)" || error "Build failed."
+
+info "✅ Build completed successfully."
 
 # Function to check if a package is installed
 check_package_installed() {
