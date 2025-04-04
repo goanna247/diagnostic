@@ -36,10 +36,10 @@ include_directories(
   /usr/lib/x86_64-linux-gnu/glib-2.0/include
   /usr/lib/x86_64-linux-gnu/dbus-1.0/include
   /usr/include/gio-unix-2.0
-  /home/anna/Downloads/new_folder/bluez-5.80
+  #/home/anna/Downloads/new_folder/bluez-5.80
   /usr/include/glib-2.0
   /usr/lib/x86_64-linux-gnu/glib-2.0/include
-  /home/anna/Downloads/new_folder/bluez-5.80/gdbus
+  #/home/anna/Downloads/new_folder/bluez-5.80/gdbus
   #/usr/lib/x86_64-linux-gnu/libglib-2.0.so
   #/usr/lib/x86_64-linux-gnu/libgio-2.0.so
 )
