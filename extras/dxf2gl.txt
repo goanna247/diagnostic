@@ -1,0 +1,9 @@
+# Group pairs of lines
+cat NDS_Crank_Arm.dxf | sed 'N;s/\n/ /' | \
+# Start of each polyline \
+sed 's/  0 LWPOLYLINE/glEnd();\n\nglBegin(GL_POLYGON);/' | \
+# X vertex
+sed 's/ 10 /glVertex2f(/' | \
+# Y vertex
+sed 's/ 20 \(.*\)/,\1);/' > NDS_Crank_Arm.gl
+

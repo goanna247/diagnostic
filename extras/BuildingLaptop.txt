@@ -1,0 +1,29 @@
+# /etc/group
+# Add user to sudo group
+
+# /etc/apt/sources.list
+# ?Add contrib and non-free
+
+apt-get install cifs-utils
+apt-get install build-essential
+apt-get install linux-headers-5.10.0-21-amd64
+apt-get install ssh
+apt-get install libwxgtk3.0-gtk3-dev
+apt-get install libgsl-dev
+apt-get install libexplain-dev
+apt-get install libdbus-1-dev
+apt-get install bluez-source
+apt-get install libglib2.0-dev
+apt-get install libglew-dev
+
+apt-get install firmware-realtek
+
+# WiFi install
+#git clone https://github.com/lwfinger/rtw88.git
+#cd rtw88
+#make
+#sudo make install
+
+# Mount network drive
+#/etc/fstab
+#//192.168.0.6/david /mnt/fractal    cifs    noauto,user,username=david,password=david,file_mode=0777,dir_mode=0777,uid=1000,gid=1000,rw,exec       0       0

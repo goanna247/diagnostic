@@ -1,0 +1,86 @@
+[Buildset]
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00d\x00i\x00a\x00g\x00n\x00o\x00s\x00t\x00i\x00c)
+
+[CMake]
+Build Directory Count=2
+Current Build Directory Index-Host System=1
+
+[CMake][CMake Build Directory 0]
+Build Directory Path=/home/david/Projects/BicyclePowerMeter/InfoCrank2021/Software/DiagnosticGUI/build
+Build Type=Debug
+CMake Binary=/home/david/Software/cmake-3.22.2-linux-x86_64/bin/cmake
+CMake Executable=/home/david/Software/cmake-3.22.2-linux-x86_64/bin/cmake
+Environment Profile=
+Extra Arguments=
+Install Directory=/usr/local
+Runtime=Host System
+
+[CMake][CMake Build Directory 1]
+Build Directory Path=/home/anna/Downloads/new_folder/DiagnosticGUI/build2
+Build Type=Debug
+CMake Binary=/home/anna/Downloads/cmake-3.22.2-linux-x86_64/bin
+CMake Executable=/home/anna/Downloads/cmake-3.22.2-linux-x86_64/bin
+Environment Profile=
+Extra Arguments=
+Install Directory=/usr/local
+Runtime=Host System
+
+[CustomDefinesAndIncludes][ProjectPath0]
+Path=.
+parseAmbiguousAsCPP=true
+parserArguments=-ferror-limit=100 -fspell-checking -Wdocumentation -Wunused-parameter -Wunreachable-code -Wall -std=c++11
+parserArgumentsC=-ferror-limit=100 -fspell-checking -Wdocumentation -Wunused-parameter -Wunreachable-code -Wall -std=c99
+parserArgumentsCuda=-ferror-limit=100 -fspell-checking -Wdocumentation -Wunused-parameter -Wunreachable-code -Wall -std=c++11
+parserArgumentsOpenCL=-ferror-limit=100 -fspell-checking -Wdocumentation -Wunused-parameter -Wunreachable-code -Wall -cl-std=CL1.1
+
+[CustomDefinesAndIncludes][ProjectPath0][Compiler]
+Name=GCC
+
+[CustomDefinesAndIncludes][ProjectPath0][Includes]
+1=/usr/lib/x86_64-linux-gnu/wx/include/gtk2-unicode-3.0
+10=/usr/include/uuid/
+2=/usr/include/wx-3.0
+3=/usr/include/glib-2.0/glib.h
+4=/usr/lib/x86_64-linux-gnu/glib-2.0/include/
+5=/usr/include/dbus-1.0/
+6=/usr/lib/x86_64-linux-gnu/dbus-1.0/include/
+7=/home/anna/Downloads/bluez-5.66
+8=/usr/include/libmount/
+9=/usr/include/blkid/
+
+[Launch]
+Launch Configurations=Launch Configuration 0
+
+[Launch][Launch Configuration 0]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=diagnostic
+Type=Native Application
+
+[Launch][Launch Configuration 0][Data]
+Arguments=
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x14\x00d\x00i\x00a\x00g\x00n\x00o\x00s\x00t\x00i\x00c\x00\x00\x00\x14\x00d\x00i\x00a\x00g\x00n\x00o\x00s\x00t\x00i\x00c)
+Dependency Action=Build
+EnvironmentGroup=
+Executable=file:///home/anna/Downloads/new_folder/DiagnosticGUI/build2/diagnostic
+External Terminal=konsole --noclose --workdir %workdir -e %exe
+Kill Before Executing Again=4194304
+Project Target=diagnostic,diagnostic
+Use External Terminal=false
+Working Directory=
+isExecutable=true
+
+[Project]
+VersionControlSupport=
+
+[SourceFormatter]
+OverrideKateIndentation=true
+UseDefault=false
+text/x-c++hdr=kdevastyle||Qt
+text/x-c++src=kdevastyle||Qt
+text/x-chdr=kdevastyle||Qt
+text/x-csharp=kdevcustomscript||GNU_indent_GNU
+text/x-csrc=kdevastyle||Qt
+text/x-java=kdevcustomscript||GNU_indent_GNU
+text/x-objchdr=kdevcustomscript||GNU_indent_GNU
+text/x-objcsrc=kdevcustomscript||GNU_indent_GNU

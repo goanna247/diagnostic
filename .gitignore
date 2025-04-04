@@ -1,0 +1,97 @@
+# General
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*.out
+*.pid
+*.gz
+
+# Build directories
+/build/
+/build2/
+*/build2/
+*/build/
+*/out/
+*/dist/
+
+# CMake and other build system files
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+*.cmake
+*.mk
+
+# Qt Creator
+*.pro.user
+*.pro.user.*
+*.qmake.stash
+
+# Eclipse
+.settings/
+*.cproject
+*.project
+
+# CodeBlocks
+*.depend
+*.layout
+*.cbp
+*.workspace
+
+# Visual Studio
+.vscode/
+.vs/
+*.vcxproj*
+*.user
+*.suo
+*.pdb
+*.idb
+*.opt
+*.plg
+*.log
+*.tlog
+*.sdf
+
+# JetBrains IDEs (e.g., IntelliJ, CLion)
+.idea/
+
+# BlueZ specific
+/bluetoothd/
+lib/bluetoothd/
+*.tar.gz
+*.tar.bz2
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Executables
+*.exe
+*.out
+*.app
+*.so
+*.dylib
+*.a
+*.dll
+*.lib
+
+# Python bytecode files
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Linux
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
