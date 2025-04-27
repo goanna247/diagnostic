@@ -49,6 +49,7 @@ add_executable(diagnostic
   ${PROJECT_SOURCE_DIR}/src/main.cpp
   ${PROJECT_SOURCE_DIR}/src/thread.cpp
   ${PROJECT_SOURCE_DIR}/src/crank-canvas.cpp
+  ${PROJECT_SOURCE_DIR}/src/gui-helper.cpp
 )
 
 target_link_directories(diagnostic PUBLIC

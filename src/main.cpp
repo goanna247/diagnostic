@@ -1,19 +1,19 @@
 /*
-cd /mnt/fractal/Projects/BicyclePowerMeter/InfoCrank2021/Software/DiagnosticGUI/build/
-
-g++ -c -I ~/Software/bluez-source $(pkg-config --cflags glib-2.0) $(pkg-config --cflags dbus-1) $(wx-config --cxxflags) ../src/main.cpp ../src/thread.cpp ../src/crank-canvas.cpp && \
-g++ -o diagnostic \
-main.o \
-thread.o \
-crank-canvas.o \
--L ~/Software/bluez-source/gdbus/.libs \
--lgdbus-internal -lexplain -lgsl -lGL -lGLEW \
-$(wx-config --libs --gl-libs) \
-$(pkg-config --libs glib-2.0) \
-$(pkg-config --libs dbus-1) && \
-./diagnostic | tee log.txt
-
-*/
+ * cd /mnt/fractal/Projects/BicyclePowerMeter/InfoCrank2021/Software/DiagnosticGUI/build/
+ *
+ * g++ -c -I ~/Software/bluez-source $(pkg-config --cflags glib-2.0) $(pkg-config --cflags dbus-1) $(wx-config --cxxflags) ../src/main.cpp ../src/thread.cpp ../src/crank-canvas.cpp && \
+ * g++ -o diagnostic \
+ * main.o \
+ * thread.o \
+ * crank-canvas.o \
+ * -L ~/Software/bluez-source/gdbus/.libs \
+ * -lgdbus-internal -lexplain -lgsl -lGL -lGLEW \
+ * $(wx-config --libs --gl-libs) \
+ * $(pkg-config --libs glib-2.0) \
+ * $(pkg-config --libs dbus-1) && \
+ * ./diagnostic | tee log.txt
+ *
+ */
 
 #include "main.h"
 
@@ -75,7 +75,28 @@ bool IC2App::OnInit()
 }
 
 
+void IC2Frame::OnCountdownTimer(wxTimerEvent &event)
+{
+    if (countdownSeconds > 0) {
+        countdownSeconds--;
 
+        wxString labelText;
+        labelText.Printf("Disconnect in: %ds", countdownSeconds);
+        disconnectCountdownLabel->SetLabel(labelText);
+    } else {
+        countdownTimer->Stop();
+        disconnectCountdownLabel->SetLabel("Disconnected!");
+
+
+        //trigger disconnect function here
+
+    }
+}
+
+//----------ANNA----------------------
+wxBEGIN_EVENT_TABLE(IC2Frame, wxFrame)
+EVT_TIMER(wxID_ANY, IC2Frame::OnCountdownTimer)
+wxEND_EVENT_TABLE()
 
 
 // -------------------------------------------------------------------------------------------------
@@ -87,256 +108,26 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     // The icon in the title bar
     SetIcon(wxICON(icon));
 
-    // The menubar
-    wxMenu *file_menu = new wxMenu;
-
-    file_menu->Append(DISCONNECT, "&Disconnect...\tF1", "Disconnect all", wxITEM_CHECK);
-    file_menu->Append(ADD_DEVICE, "&Add Device...\tF2");
-    file_menu->Append(LAYOUT_TEST_NB_SIZER, "Test &notebook sizers...\tF3");
-    file_menu->Append(LAYOUT_TEST_GB_SIZER, "Test &gridbag sizer...\tF4");
-    file_menu->Append(LAYOUT_TEST_SET_MINIMAL, "Test Set&ItemMinSize...\tF5");
-    file_menu->Append(LAYOUT_TEST_NESTED, "Test nested sizer in a wxPanel...\tF6");
-    file_menu->Append(LAYOUT_TEST_WRAP, "Test wrap sizers...\tF7");
-    file_menu->AppendSeparator();
-    file_menu->Append(wxID_EXIT, "E&xit", "Quit program");
-
-    // Bind menu events
-    Bind(wxEVT_MENU, [&](wxCommandEvent & evt) {
-        SendCommand("Disconnect all\n");
-    }, DISCONNECT);
-    Bind(wxEVT_MENU, [&](wxCommandEvent & evt) {
-        SendCommand("Quit\n");
-    }, wxID_EXIT);
-
-    wxMenu *help_menu = new wxMenu;
-    help_menu->Append(wxID_ABOUT, "&About", "About layout demo...");
-
-    wxMenuBar *menu_bar = new wxMenuBar;
-    menu_bar->Append(file_menu, "&File");
-    menu_bar->Append(help_menu, "&Help");
-    SetMenuBar(menu_bar);
-
-    // The status bar
-    CreateStatusBar(2);
-//    SetStatusText("Status Bar Section 0", 0);
-//    SetStatusText("Status Bar Section 1", 1);
-
-    // The main panel
-    wxNotebook *notebook = new wxNotebook(this, wxID_ANY);
-    devices = new wxPanel(notebook, wxID_ANY);
-    wxPanel *devInfo = new wxPanel(notebook, wxID_ANY);
-    wxPanel *battery = new wxPanel(notebook, wxID_ANY);
-    wxPanel *features = new wxPanel(notebook, wxID_ANY);
-    wxPanel *control = new wxPanel(notebook, wxID_ANY);
-    wxPanel *sensor_location = new wxPanel(notebook, wxID_ANY);
-    measurement = new wxPanel(notebook, wxID_ANY);
-    vector = new wxPanel(notebook, wxID_ANY);
-    wxPanel *infoCrank_control = new wxPanel(notebook, wxID_ANY);
-    wxPanel *infoCrank_raw = new wxPanel(notebook, wxID_ANY);
-
-    crank_graphics = new CrankCanvas(notebook, wxID_ANY);
-
-    wxPanel *page12 = new wxPanel(notebook, wxID_ANY);
-
-    notebook->AddPage(devices, "Devices");
-    notebook->AddPage(devInfo, "Device Information");
-    notebook->AddPage(battery, "Battery Information");
-    notebook->AddPage(features, "Features");
-    notebook->AddPage(measurement, "Measurement");
-    notebook->AddPage(sensor_location, "Sensor Location");
-    notebook->AddPage(control, "Control Point");
-    notebook->AddPage(vector, "Vector");
-    notebook->AddPage(infoCrank_control, "InfoCrank Control Point");
-    notebook->AddPage(infoCrank_raw, "InfoCrank Raw Data");
-    notebook->AddPage(crank_graphics, "Graphics");
-    notebook->AddPage(page12, "Page 12");
-
-    // Common sizer flags
-    wxSizerFlags fieldFlags;
-    fieldFlags.Border(wxLEFT | wxRIGHT, 10);
-    wxSizerFlags groupBoxFlags(0);
-    groupBoxFlags.Expand().Border(wxTOP | wxLEFT | wxRIGHT, 10);
-    wxSizerFlags groupBoxInnerFlags(0);
-    groupBoxInnerFlags.Expand().Border(wxBOTTOM, 10);
-    wxSizerFlags rightFlags;
-    rightFlags.Align(wxALIGN_RIGHT).Border(wxRIGHT, 10);
-    wxSizerFlags bottomRightFlags;
-    bottomRightFlags.Align(wxALIGN_RIGHT | wxALIGN_BOTTOM).Border(wxBOTTOM | wxRIGHT, 10);
-    wxSizerFlags centreFlags;
-    centreFlags.Align(wxALIGN_CENTRE | wxALIGN_BOTTOM).Border(wxALL, 5);
-    wxSizerFlags gridFlags;
-    gridFlags.Expand().Border(wxALL, 0);
+    CreateMenuBar(this); //helper function found in gui-helper
+    CreateNotebookPages(this);
 
 
-    // Devices panel
-    devicesSizer = new wxWrapSizer(wxHORIZONTAL);
-    devices->SetSizerAndFit(devicesSizer);
 
-    // Device information panel
-    manufacturerName = new wxStaticText(devInfo, wxID_ANY, "-");
-    modelNumber = new wxStaticText(devInfo, wxID_ANY, "-");
-    serialNumber = new wxStaticText(devInfo, wxID_ANY, "-");
-    hardwareRevisionNumber = new wxStaticText(devInfo, wxID_ANY, "-");
-    firmwareRevisionNumber = new wxStaticText(devInfo, wxID_ANY, "-");
-    softwareRevisionNumber = new wxStaticText(devInfo, wxID_ANY, "-");
-    systemID = new wxStaticText(devInfo, wxID_ANY, "-");
-    PNPVendorIDSource = new wxStaticText(devInfo, wxID_ANY, "-");
-    PNPVendorID = new wxStaticText(devInfo, wxID_ANY, "-");
-    PNPProductID = new wxStaticText(devInfo, wxID_ANY, "-");
-    PNPProductVersion = new wxStaticText(devInfo, wxID_ANY, "-");
-    wxButton *refreshDeviceInformation = new wxButton(devInfo, wxID_ANY, "Refresh");
+    wxSizerFlags fieldFlags, groupBoxFlags, groupBoxInnerFlags, rightFlags, bottomRightFlags, centreFlags, gridFlags;
+    InitializeSizerFlags(fieldFlags, groupBoxFlags, groupBoxInnerFlags, rightFlags, bottomRightFlags, centreFlags, gridFlags);
 
-    // Bind the controls
-    refreshDeviceInformation->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
-        SendCommand("Refresh device information\n");
-    });
 
-    {
-        wxFlexGridSizer *sizer = new wxFlexGridSizer(2, 0, 0);
-        sizer->AddGrowableCol(1);
-        sizer->AddGrowableRow(11);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "Manufacturer name"), fieldFlags);
-        sizer->Add(manufacturerName, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "Model number"), fieldFlags);
-        sizer->Add(modelNumber, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "Serial number"), fieldFlags);
-        sizer->Add(serialNumber, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "Hardware revision number"), fieldFlags);
-        sizer->Add(hardwareRevisionNumber, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "Firmware revision number"), fieldFlags);
-        sizer->Add(firmwareRevisionNumber, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "Software revision"), fieldFlags);
-        sizer->Add(softwareRevisionNumber, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "System ID"), fieldFlags);
-        sizer->Add(systemID, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "PNP vendor ID source"), fieldFlags);
-        sizer->Add(PNPVendorIDSource, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "PNP vendor ID"), fieldFlags);
-        sizer->Add(PNPVendorID, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "PNP product ID"), fieldFlags);
-        sizer->Add(PNPProductID, fieldFlags);
-        sizer->Add(new wxStaticText(devInfo, wxID_ANY, "PNP product version"), fieldFlags);
-        sizer->Add(PNPProductVersion, fieldFlags);
-        sizer->AddStretchSpacer();
-        sizer->Add(refreshDeviceInformation, bottomRightFlags);
-        devInfo->SetSizerAndFit(sizer);
-    }
+    SetupDevicePanels(this);
+    SetupDeviceInfoPage(this, fieldFlags, bottomRightFlags);
+    SetupBatteryPage(this, fieldFlags, groupBoxFlags,
 
-    // TODO Battery panel
-    batteryLevel = new wxStaticText(battery, wxID_ANY, "-");
-    wxButton *refreshBatteryInformation = new wxButton(battery, wxID_ANY, "Refresh");
-    wxCheckBox *loggingBattery = new wxCheckBox(battery, wxID_ANY, "/dev/null");
-    wxButton *logFileBattery = new wxButton(battery, wxID_ANY, "...", wxDefaultPosition, wxSize(50, 20));
+    groupBoxInnerFlags, rightFlags);
 
-    // Bind the controls
-    refreshBatteryInformation->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
-        SendCommand("Refresh battery information\n");
-    });
+    //SetupFeaturesPage(this);
 
-    logFileBattery->Bind(wxEVT_BUTTON, &IC2Frame::LogFileName, this, wxID_ANY, wxID_ANY, new FileDialogParameters("battery.log", loggingBattery));
-    loggingBattery->Bind(wxEVT_CHECKBOX,
-    [&](wxCommandEvent & evt) {
-        wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
-        if (checkBox->IsChecked()) {
-//            logBattery.Create(checkBox->GetLabel(), true);
-            logBattery.Open(checkBox->GetLabel(), wxFile::write);
-        } else {
-            logBattery.Close();
-        }
-    });
+    SetupFeaturesPage(this, fieldFlags, bottomRightFlags);
 
-    // Layout the page
-    {
-        wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-        {
-        wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-            flexGridSizer->AddGrowableCol(1);
-            //flexGridSizer->AddGrowableRow(12);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Battery level"), fieldFlags);
-            flexGridSizer->Add(batteryLevel, fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Battery level status"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Estimated Service Date"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Battery critical status"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Battery energy status"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Battery time status"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Battery health status"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Battery health information"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Battery information"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Manufacturer name"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Model number"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "Serial number"), fieldFlags);
-            flexGridSizer->Add(new wxStaticText(battery, wxID_ANY, "-"), fieldFlags);
-            sizer->Add(flexGridSizer, groupBoxFlags);
-        }
-
-        sizer->AddStretchSpacer();
-
-        {
-            wxBoxSizer *boxSizer = new wxBoxSizer(wxHORIZONTAL);
-            boxSizer->Add(loggingBattery, fieldFlags);
-            boxSizer->Add(logFileBattery, fieldFlags);
-            boxSizer->AddStretchSpacer();
-            boxSizer->Add(refreshBatteryInformation, rightFlags);
-            sizer->Add(boxSizer, groupBoxInnerFlags);
-        }
-
-        battery->SetSizerAndFit(sizer);
-    }
-
-    // Cycling Power Features
-    balanceFeature = new wxCheckBox(features, wxID_ANY, "Bit 0");
-//    balanceFeature->Enable(false);
-    torqueFeature = new wxCheckBox(features, wxID_ANY, "Bit 1");
-//    torqueFeature->Enable(false);
-    wheelRevolutionFeature = new wxCheckBox(features, wxID_ANY, "Bit 2");
-//    wheelRevolutionFeature->Enable(false);
-    crankRevolutionFeature = new wxCheckBox(features, wxID_ANY, "Bit 3");
-//    crankRevolutionFeature->Enable(false);
-    magnitudesFeature = new wxCheckBox(features, wxID_ANY, "Bit 4");
-//    magnitudesFeature->Enable(false);
-    anglesFeature = new wxCheckBox(features, wxID_ANY, "Bit 5");
-//    anglesFeature->Enable(false);
-    deadSpotsFeature = new wxCheckBox(features, wxID_ANY, "Bit 6");
-//    deadSpotsFeature->Enable(false);
-    energyFeature = new wxCheckBox(features, wxID_ANY, "Bit 7");
-//    energyFeature->Enable(false);
-    compensationIndicatorFeature = new wxCheckBox(features, wxID_ANY, "Bit 8");
-//    compensationIndicatorFeature->Enable(false);
-    compensationFeature = new wxCheckBox(features, wxID_ANY, "Bit 9");
-//    compensationFeature->Enable(false);
-    maskingFeature = new wxCheckBox(features, wxID_ANY, "Bit 10");
-//    maskingFeature->Enable(false);
-    locationsFeature = new wxCheckBox(features, wxID_ANY, "Bit 11");
-//    locationsFeature->Enable(false);
-    crankLengthFeature = new wxCheckBox(features, wxID_ANY, "Bit 12");
-//    crankLengthFeature->Enable(false);
-    chainLengthFeature = new wxCheckBox(features, wxID_ANY, "Bit 13");
-//    chainLengthFeature->Enable(false);
-    chainWeightFeature = new wxCheckBox(features, wxID_ANY, "Bit 14");
-//    chainWeightFeature->Enable(false);
-    spanFeature = new wxCheckBox(features, wxID_ANY, "Bit 15");
-//    spanFeature->Enable(false);
-    contextFeature = new wxStaticText(features, wxID_ANY, "Bit 16");
-    directionFeature = new wxCheckBox(features, wxID_ANY, "Bit 17");
-//    directionFeature->Enable(false);
-    dateFeature = new wxCheckBox(features, wxID_ANY, "Bit 18");
-//    dateFeature->Enable(false);
-    enhancedCompensationFeature = new wxCheckBox(features, wxID_ANY, "Bit 19");
-//    enhancedCompensationFeature->Enable(false);
-    distributedFeature = new wxStaticText(features, wxID_ANY, "Bit 20-21");
-    wxButton *refreshFeatures = new wxButton(features, wxID_ANY, "Refresh");
-
-    // Bind the controls
+    /*// Bind the controls
     refreshFeatures->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
         SendCommand("Refresh features\n");
     });
@@ -390,31 +181,31 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
         sizer->AddStretchSpacer();
         sizer->Add(refreshFeatures, bottomRightFlags);
         features->SetSizerAndFit(sizer);
-    }
+    }*/
 
     // Cycling power measurement
     pedalPowerBalancePresent = new wxCheckBox(measurement, wxID_ANY, "Balance: Unknown");
-//    pedalPowerBalancePresent->Enable(false);
+    //    pedalPowerBalancePresent->Enable(false);
     accumulatedTorquePresent = new wxCheckBox(measurement, wxID_ANY, "Accumulated torque: Wheel based");
-//    accumulatedTorquePresent->Enable(false);
+    //    accumulatedTorquePresent->Enable(false);
     wheelRevolutionDataPresent = new wxCheckBox(measurement, wxID_ANY, "Wheel revolution data");
-//    wheelRevolutionDataPresent->Enable(false);
+    //    wheelRevolutionDataPresent->Enable(false);
     crankRevolutionDataPresent = new wxCheckBox(measurement, wxID_ANY, "Crank revolution data");
-//    crankRevolutionDataPresent->Enable(false);
+    //    crankRevolutionDataPresent->Enable(false);
     extremeForceMagnitudesPresent = new wxCheckBox(measurement, wxID_ANY, "Extreme force magnitudes");
-//    extremeForceMagnitudesPresent->Enable(false);
+    //    extremeForceMagnitudesPresent->Enable(false);
     extremeTorqueMagnitudesPresent = new wxCheckBox(measurement, wxID_ANY, "Extreme torque magnitudes");
-//    extremeTorqueMagnitudesPresent->Enable(false);
+    //    extremeTorqueMagnitudesPresent->Enable(false);
     extremeAnglesPresent = new wxCheckBox(measurement, wxID_ANY, "Extreme angles");
-//    extremeAnglesPresent->Enable(false);
+    //    extremeAnglesPresent->Enable(false);
     topDeadSpotAnglePresent = new wxCheckBox(measurement, wxID_ANY, "Top dead spot angle");
-//    topDeadSpotAnglePresent->Enable(false);
+    //    topDeadSpotAnglePresent->Enable(false);
     bottomDeadSpotAnglePresent = new wxCheckBox(measurement, wxID_ANY, "Bottom dead spot angle");
-//    bottomDeadSpotAnglePresent->Enable(false);
+    //    bottomDeadSpotAnglePresent->Enable(false);
     accumulatedEnergyPresent = new wxCheckBox(measurement, wxID_ANY, "Accumulated energy");
-//    accumulatedEnergyPresent->Enable(false);
+    //    accumulatedEnergyPresent->Enable(false);
     offsetCompensationIndicator = new wxCheckBox(measurement, wxID_ANY, "Offset compensation indicator");
-//    offsetCompensationIndicator->Enable(false);
+    //    offsetCompensationIndicator->Enable(false);
     instantaneousPower = new wxStaticText(measurement, wxID_ANY, "-");
     pedalPowerBalance = new wxStaticText(measurement, wxID_ANY, "-");
     accumulatedTorque = new wxStaticText(measurement, wxID_ANY, "-");
@@ -451,39 +242,39 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     // Bind the controls
     notifyMeasurement->Bind(wxEVT_TOGGLEBUTTON, [&](wxCommandEvent & evt) {
         switch (evt.GetInt()) {
-        case TRUE:
-            ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
-            SendCommand("Notify measurement on\n");
-            break;
-        case FALSE:
-            ((wxToggleButton *) evt.GetEventObject())->SetLabel("Notify");
-            SendCommand("Notify measurement off\n");
-            break;
+            case TRUE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
+                SendCommand("Notify measurement on\n");
+                break;
+            case FALSE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Notify");
+                SendCommand("Notify measurement off\n");
+                break;
         }
     });
     broadcastMeasurement->Bind(wxEVT_TOGGLEBUTTON, [&](wxCommandEvent & evt) {
         switch (evt.GetInt()) {
-        case TRUE:
-            ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
-            SendCommand("Broadcast measurement on\n");
-            break;
-        case FALSE:
-            ((wxToggleButton *) evt.GetEventObject())->SetLabel("Broadcast");
-            SendCommand("Broadcast measurement off\n");
-            break;
+            case TRUE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
+                SendCommand("Broadcast measurement on\n");
+                break;
+            case FALSE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Broadcast");
+                SendCommand("Broadcast measurement off\n");
+                break;
         }
     });
     logFileMeasurement->Bind(wxEVT_BUTTON, &IC2Frame::LogFileName, this, wxID_ANY, wxID_ANY, new FileDialogParameters("measurement.log", loggingMeasurement));
     loggingMeasurement->Bind(wxEVT_CHECKBOX,
-    [&](wxCommandEvent & evt) {
-        wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
-        if (checkBox->IsChecked()) {
-//            logMeasurement.Create(checkBox->GetLabel(), true);
-            logMeasurement.Open(checkBox->GetLabel(), wxFile::write);
-        } else {
-            logMeasurement.Close();
-        }
-    });
+                             [&](wxCommandEvent & evt) {
+                                 wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
+                                 if (checkBox->IsChecked()) {
+                                     //            logMeasurement.Create(checkBox->GetLabel(), true);
+                                     logMeasurement.Open(checkBox->GetLabel(), wxFile::write);
+                                 } else {
+                                     logMeasurement.Close();
+                                 }
+                             });
 
     // Layout the page
     {
@@ -791,13 +582,13 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
 
     // Cycling power vector page
     crankRevolutionDataVectorPresent = new wxCheckBox(vector, wxID_ANY, "Crank revolution data present");
-//    crankRevolutionDataVectorPresent->Enable(false);
+    //    crankRevolutionDataVectorPresent->Enable(false);
     firstCrankMeasurementAnglePresent = new wxCheckBox(vector, wxID_ANY, "First crank angle measurement present");
-//    firstCrankMeasurementAnglePresent->Enable(false);
+    //    firstCrankMeasurementAnglePresent->Enable(false);
     instantaneousForceMagnitudeArrayPresent = new wxCheckBox(vector, wxID_ANY, "Instantaneous force magnitude array present");
-//    instantaneousForceMagnitudeArrayPresent->Enable(false);
+    //    instantaneousForceMagnitudeArrayPresent->Enable(false);
     instantaneousTorqueMagnitudeArrayPresent = new wxCheckBox(vector, wxID_ANY, "Instantaneous torque magnitude array present");
-//    instantaneousTorqueMagnitudeArrayPresent->Enable(false);
+    //    instantaneousTorqueMagnitudeArrayPresent->Enable(false);
     instantaneousMeasurementDirection = new wxStaticText(vector, wxID_ANY, "-");
     cumulativeCrankVectorRevolutions = new wxStaticText(vector, wxID_ANY, "-");
     lastCrankEventVectorTime = new wxStaticText(vector, wxID_ANY, "-");
@@ -811,29 +602,29 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     // Bind the controls
     notifyVector->Bind(wxEVT_TOGGLEBUTTON, [&](wxCommandEvent & evt) {
         switch (evt.GetInt()) {
-        case TRUE:
-            ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
-            SendCommand("Notify vector on\n");
-            break;
-        case FALSE:
-            ((wxToggleButton *) evt.GetEventObject())->SetLabel("Notify");
-            SendCommand("Notify vector off\n");
-            break;
+            case TRUE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
+                SendCommand("Notify vector on\n");
+                break;
+            case FALSE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Notify");
+                SendCommand("Notify vector off\n");
+                break;
         }
     });
     logFileVector->Bind(wxEVT_BUTTON, &IC2Frame::LogFileName, this, wxID_ANY, wxID_ANY, new FileDialogParameters("vector.log", loggingVector));
-//    loggingVector->Bind(wxEVT_CHECKBOX, &IC2Frame::LogFileOpen, this, wxID_ANY, wxID_ANY, new LogFile(&logVector));
+    //    loggingVector->Bind(wxEVT_CHECKBOX, &IC2Frame::LogFileOpen, this, wxID_ANY, wxID_ANY, new LogFile(&logVector));
 
     loggingVector->Bind(wxEVT_CHECKBOX,
-    [&](wxCommandEvent & evt) {
-        wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
-        if (checkBox->IsChecked()) {
-//            logMeasurement.Create(checkBox->GetLabel(), true);
-            logVector.Open(checkBox->GetLabel(), wxFile::write);
-        } else {
-            logVector.Close();
-        }
-    });
+                        [&](wxCommandEvent & evt) {
+                            wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
+                            if (checkBox->IsChecked()) {
+                                //            logMeasurement.Create(checkBox->GetLabel(), true);
+                                logVector.Open(checkBox->GetLabel(), wxFile::write);
+                            } else {
+                                logVector.Close();
+                            }
+                        });
 
 
     // Layout the page
@@ -1002,11 +793,11 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
             wxString().Format(
                 "Set strain parameters %s %s %s %s %s %s\n",
                 k1->GetValue(),
-                k2->GetValue(),
-                k3->GetValue(),
-                k4->GetValue(),
-                k5->GetValue(),
-                k6->GetValue()));
+                              k2->GetValue(),
+                              k3->GetValue(),
+                              k4->GetValue(),
+                              k5->GetValue(),
+                              k6->GetValue()));
     });
     requestKalmanFilterParameters->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
         SendCommand("Get KF parameters\n");
@@ -1016,10 +807,10 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
             wxString().Format(
                 "Set KF parameters %s %s %s %s %s\n",
                 s2alpha->GetValue(),
-                s2accel->GetValue(),
-                driveRatio->GetValue(),
-                r1->GetValue(),
-                r2->GetValue()));
+                              s2accel->GetValue(),
+                              driveRatio->GetValue(),
+                              r1->GetValue(),
+                              r2->GetValue()));
     });
     requestAccel1CalibrationParameters->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
         SendCommand("Get accelerometer 1 transform\n");
@@ -1029,8 +820,8 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
             wxString().Format(
                 "Set accelerometer 1 transform %s %s %s %s %s %s %s %s %s %s %s %s\n",
                 a1[0]->GetValue(), a1[1]->GetValue(), a1[2]->GetValue(), a1[3]->GetValue(),
-                a1[4]->GetValue(), a1[5]->GetValue(), a1[6]->GetValue(), a1[7]->GetValue(),
-                a1[8]->GetValue(), a1[9]->GetValue(), a1[10]->GetValue(), a1[11]->GetValue()));
+                              a1[4]->GetValue(), a1[5]->GetValue(), a1[6]->GetValue(), a1[7]->GetValue(),
+                              a1[8]->GetValue(), a1[9]->GetValue(), a1[10]->GetValue(), a1[11]->GetValue()));
     });
     requestAccel2CalibrationParameters->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
         SendCommand("Get accelerometer 2 transform\n");
@@ -1040,8 +831,8 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
             wxString().Format(
                 "Set accelerometer 2 transform %s %s %s %s %s %s %s %s %s %s %s %s\n",
                 a2[0]->GetValue(), a2[1]->GetValue(), a2[2]->GetValue(), a2[3]->GetValue(),
-                a2[4]->GetValue(), a2[5]->GetValue(), a2[6]->GetValue(), a2[7]->GetValue(),
-                a2[8]->GetValue(), a2[9]->GetValue(), a2[10]->GetValue(), a2[11]->GetValue()));
+                              a2[4]->GetValue(), a2[5]->GetValue(), a2[6]->GetValue(), a2[7]->GetValue(),
+                              a2[8]->GetValue(), a2[9]->GetValue(), a2[10]->GetValue(), a2[11]->GetValue()));
     });
     requestPartnerAddress->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
         SendCommand("Get partner address\n");
@@ -1051,7 +842,7 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
             wxString().Format(
                 "Set partner address %s %s %s %s %s %s\n",
                 ble_addr[0]->GetValue(), ble_addr[1]->GetValue(), ble_addr[2]->GetValue(),
-                ble_addr[3]->GetValue(), ble_addr[4]->GetValue(), ble_addr[5]->GetValue()));
+                              ble_addr[3]->GetValue(), ble_addr[4]->GetValue(), ble_addr[5]->GetValue()));
     });
     deletePartnerAddress->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
         SendCommand("Delete partner address\n");
@@ -1067,7 +858,7 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
             wxString().Format(
                 "Set cycling power vector parameters %s %s\n",
                 cpvSize->GetValue(),
-                cpvDownsample->GetValue()));
+                              cpvDownsample->GetValue()));
     });
 
     // Layout the page
@@ -1105,10 +896,10 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
             }
             {
                 wxBoxSizer *boxSizer = new wxBoxSizer(wxHORIZONTAL);
-//            wxPanel *panel = new wxPanel(infoCrank_control, wxID_ANY);
-//            panel->SetBackgroundColour(wxColour(wxT("RED")));
-//            boxSizer->Add(panel, 1, wxEXPAND | wxALL ,10);
-//            wxStaticText *staticText = new wxStaticText(panel, wxID_ANY, "1.00");
+                //            wxPanel *panel = new wxPanel(infoCrank_control, wxID_ANY);
+                //            panel->SetBackgroundColour(wxColour(wxT("RED")));
+                //            boxSizer->Add(panel, 1, wxEXPAND | wxALL ,10);
+                //            wxStaticText *staticText = new wxStaticText(panel, wxID_ANY, "1.00");
                 boxSizer->Add(requestStrainCalibrationParameters);
                 boxSizer->Add(setStrainCalibrationParameters);
                 staticBoxSizer->Add(boxSizer, centreFlags);
@@ -1269,392 +1060,394 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     // Bind the controls
     resetStrain->Bind(
         wxEVT_BUTTON,
-    [&](wxCommandEvent & evt) {
-        strain_num = 0;
-        strain_sum = 0.0;
-        strain_sum2 = 0.0;
-        strain->SetValue("");
-        strain_avg->SetValue("");
-        strain_sd->SetValue("");
-    }
+        [&](wxCommandEvent & evt) {
+            strain_num = 0;
+            strain_sum = 0.0;
+            strain_sum2 = 0.0;
+            strain->SetValue("");
+            strain_avg->SetValue("");
+            strain_sd->SetValue("");
+        }
     );
     resetAccel1->Bind(
         wxEVT_BUTTON,
-    [&](wxCommandEvent & evt) {
-        accel1_num = 0.001;
-        accel1X_sum = 0.0;
-        accel1X_sum2 = 0.0;
-        accel1Y_sum = 0.0;
-        accel1Y_sum2 = 0.0;
-        accel1Z_sum = 0.0;
-        accel1Z_sum2 = 0.0;
-        accel1[0]->SetValue("");
-        accel1_avg[0]->SetValue("");
-        accel1_sd[0]->SetValue("");
-        accel1[1]->SetValue("");
-        accel1_avg[1]->SetValue("");
-        accel1_sd[1]->SetValue("");
-        accel1[2]->SetValue("");
-        accel1_avg[2]->SetValue("");
-        accel1_sd[2]->SetValue("");
-    }
+        [&](wxCommandEvent & evt) {
+            accel1_num = 0.001;
+            accel1X_sum = 0.0;
+            accel1X_sum2 = 0.0;
+            accel1Y_sum = 0.0;
+            accel1Y_sum2 = 0.0;
+            accel1Z_sum = 0.0;
+            accel1Z_sum2 = 0.0;
+            accel1[0]->SetValue("");
+            accel1_avg[0]->SetValue("");
+            accel1_sd[0]->SetValue("");
+            accel1[1]->SetValue("");
+            accel1_avg[1]->SetValue("");
+            accel1_sd[1]->SetValue("");
+            accel1[2]->SetValue("");
+            accel1_avg[2]->SetValue("");
+            accel1_sd[2]->SetValue("");
+        }
     );
     resetAccel2->Bind(
         wxEVT_BUTTON,
-    [&](wxCommandEvent & evt) {
-        accel2_num = 0.001;
-        accel2X_sum = 0.0;
-        accel2X_sum2 = 0.0;
-        accel2Y_sum = 0.0;
-        accel2Y_sum2 = 0.0;
-        accel2Z_sum = 0.0;
-        accel2Z_sum2 = 0.0;
-        accel2[0]->SetValue("");
-        accel2_avg[0]->SetValue("");
-        accel2_sd[0]->SetValue("");
-        accel2[1]->SetValue("");
-        accel2_avg[1]->SetValue("");
-        accel2_sd[1]->SetValue("");
-        accel2[2]->SetValue("");
-        accel2_avg[2]->SetValue("");
-        accel2_sd[2]->SetValue("");
-    }
+        [&](wxCommandEvent & evt) {
+            accel2_num = 0.001;
+            accel2X_sum = 0.0;
+            accel2X_sum2 = 0.0;
+            accel2Y_sum = 0.0;
+            accel2Y_sum2 = 0.0;
+            accel2Z_sum = 0.0;
+            accel2Z_sum2 = 0.0;
+            accel2[0]->SetValue("");
+            accel2_avg[0]->SetValue("");
+            accel2_sd[0]->SetValue("");
+            accel2[1]->SetValue("");
+            accel2_avg[1]->SetValue("");
+            accel2_sd[1]->SetValue("");
+            accel2[2]->SetValue("");
+            accel2_avg[2]->SetValue("");
+            accel2_sd[2]->SetValue("");
+        }
     );
 
     processAccel1->Bind(
         wxEVT_BUTTON,
-    [&](wxCommandEvent & evt) {
-        // Refer to CrankAngleEstimate.odt - Transforming Sensor Data to Crank Reference Frame
-        // Copy row based on orientation to the gravity matrix
-        gravity1matrix[orientation->GetSelection() * 3 + 0] = accel1X_sum / accel1_num;
-        gravity1matrix[orientation->GetSelection() * 3 + 1] = accel1Y_sum / accel1_num;
-        gravity1matrix[orientation->GetSelection() * 3 + 2] = accel1Z_sum / accel1_num;
+        [&](wxCommandEvent & evt) {
+            // Refer to CrankAngleEstimate.odt - Transforming Sensor Data to Crank Reference Frame
+            // Copy row based on orientation to the gravity matrix
+            gravity1matrix[orientation->GetSelection() * 3 + 0] = accel1X_sum / accel1_num;
+            gravity1matrix[orientation->GetSelection() * 3 + 1] = accel1Y_sum / accel1_num;
+            gravity1matrix[orientation->GetSelection() * 3 + 2] = accel1Z_sum / accel1_num;
 
-        // Build the coefficient matrix
-        double sx = + gravity1matrix[0]
-                    + gravity1matrix[3]
-                    + gravity1matrix[6]
-                    + gravity1matrix[9]
-                    + gravity1matrix[12]
-                    + gravity1matrix[15];
-        double sy = + gravity1matrix[1]
-                    + gravity1matrix[4]
-                    + gravity1matrix[7]
-                    + gravity1matrix[10]
-                    + gravity1matrix[13]
-                    + gravity1matrix[16];
-        double sz = + gravity1matrix[2]
-                    + gravity1matrix[5]
-                    + gravity1matrix[8]
-                    + gravity1matrix[11]
-                    + gravity1matrix[14]
-                    + gravity1matrix[17];
-        double sxx = + gravity1matrix[0] * gravity1matrix[0]
-                     + gravity1matrix[3] * gravity1matrix[3]
-                     + gravity1matrix[6] * gravity1matrix[6]
-                     + gravity1matrix[9] * gravity1matrix[9]
-                     + gravity1matrix[12] * gravity1matrix[12]
-                     + gravity1matrix[15] * gravity1matrix[15];
-        double syy = + gravity1matrix[1] * gravity1matrix[1]
-                     + gravity1matrix[4] * gravity1matrix[4]
-                     + gravity1matrix[7] * gravity1matrix[7]
-                     + gravity1matrix[10] * gravity1matrix[10]
-                     + gravity1matrix[13] * gravity1matrix[13]
-                     + gravity1matrix[16] * gravity1matrix[16];
-        double szz = + gravity1matrix[2] * gravity1matrix[2]
-                     + gravity1matrix[5] * gravity1matrix[5]
-                     + gravity1matrix[8] * gravity1matrix[8]
-                     + gravity1matrix[11] * gravity1matrix[11]
-                     + gravity1matrix[14] * gravity1matrix[14]
-                     + gravity1matrix[17] * gravity1matrix[17];
-        double sxy = + gravity1matrix[0] * gravity1matrix[1]
-                     + gravity1matrix[3] * gravity1matrix[4]
-                     + gravity1matrix[6] * gravity1matrix[7]
-                     + gravity1matrix[9] * gravity1matrix[10]
-                     + gravity1matrix[12] * gravity1matrix[13]
-                     + gravity1matrix[15] * gravity1matrix[16];
-        double sxz = + gravity1matrix[0] * gravity1matrix[2]
-                     + gravity1matrix[3] * gravity1matrix[5]
-                     + gravity1matrix[6] * gravity1matrix[8]
-                     + gravity1matrix[9] * gravity1matrix[11]
-                     + gravity1matrix[12] * gravity1matrix[14]
-                     + gravity1matrix[15] * gravity1matrix[17];
-        double syz = + gravity1matrix[1] * gravity1matrix[2]
-                     + gravity1matrix[4] * gravity1matrix[5]
-                     + gravity1matrix[7] * gravity1matrix[8]
-                     + gravity1matrix[10] * gravity1matrix[11]
-                     + gravity1matrix[13] * gravity1matrix[14]
-                     + gravity1matrix[16] * gravity1matrix[17];
+            // Build the coefficient matrix
+            double sx = + gravity1matrix[0]
+            + gravity1matrix[3]
+            + gravity1matrix[6]
+            + gravity1matrix[9]
+            + gravity1matrix[12]
+            + gravity1matrix[15];
+            double sy = + gravity1matrix[1]
+            + gravity1matrix[4]
+            + gravity1matrix[7]
+            + gravity1matrix[10]
+            + gravity1matrix[13]
+            + gravity1matrix[16];
+            double sz = + gravity1matrix[2]
+            + gravity1matrix[5]
+            + gravity1matrix[8]
+            + gravity1matrix[11]
+            + gravity1matrix[14]
+            + gravity1matrix[17];
+            double sxx = + gravity1matrix[0] * gravity1matrix[0]
+            + gravity1matrix[3] * gravity1matrix[3]
+            + gravity1matrix[6] * gravity1matrix[6]
+            + gravity1matrix[9] * gravity1matrix[9]
+            + gravity1matrix[12] * gravity1matrix[12]
+            + gravity1matrix[15] * gravity1matrix[15];
+            double syy = + gravity1matrix[1] * gravity1matrix[1]
+            + gravity1matrix[4] * gravity1matrix[4]
+            + gravity1matrix[7] * gravity1matrix[7]
+            + gravity1matrix[10] * gravity1matrix[10]
+            + gravity1matrix[13] * gravity1matrix[13]
+            + gravity1matrix[16] * gravity1matrix[16];
+            double szz = + gravity1matrix[2] * gravity1matrix[2]
+            + gravity1matrix[5] * gravity1matrix[5]
+            + gravity1matrix[8] * gravity1matrix[8]
+            + gravity1matrix[11] * gravity1matrix[11]
+            + gravity1matrix[14] * gravity1matrix[14]
+            + gravity1matrix[17] * gravity1matrix[17];
+            double sxy = + gravity1matrix[0] * gravity1matrix[1]
+            + gravity1matrix[3] * gravity1matrix[4]
+            + gravity1matrix[6] * gravity1matrix[7]
+            + gravity1matrix[9] * gravity1matrix[10]
+            + gravity1matrix[12] * gravity1matrix[13]
+            + gravity1matrix[15] * gravity1matrix[16];
+            double sxz = + gravity1matrix[0] * gravity1matrix[2]
+            + gravity1matrix[3] * gravity1matrix[5]
+            + gravity1matrix[6] * gravity1matrix[8]
+            + gravity1matrix[9] * gravity1matrix[11]
+            + gravity1matrix[12] * gravity1matrix[14]
+            + gravity1matrix[15] * gravity1matrix[17];
+            double syz = + gravity1matrix[1] * gravity1matrix[2]
+            + gravity1matrix[4] * gravity1matrix[5]
+            + gravity1matrix[7] * gravity1matrix[8]
+            + gravity1matrix[10] * gravity1matrix[11]
+            + gravity1matrix[13] * gravity1matrix[14]
+            + gravity1matrix[16] * gravity1matrix[17];
 
-        gsl_matrix *A = gsl_matrix_alloc(4, 4);
-        gsl_matrix_set(A, 0, 0, sxx);
-        gsl_matrix_set(A, 0, 1, sxy);
-        gsl_matrix_set(A, 0, 2, sxz);
-        gsl_matrix_set(A, 0, 3, sx * 256.0); // Note: the 256.0 scales the deltas so that they fit into an int16_t
-        gsl_matrix_set(A, 1, 0, sxy);
-        gsl_matrix_set(A, 1, 1, syy);
-        gsl_matrix_set(A, 1, 2, syz);
-        gsl_matrix_set(A, 1, 3, sy * 256.0);
-        gsl_matrix_set(A, 2, 0, sxz);
-        gsl_matrix_set(A, 2, 1, syz);
-        gsl_matrix_set(A, 2, 2, szz);
-        gsl_matrix_set(A, 2, 3, sz * 256.0);
-        gsl_matrix_set(A, 3, 0, sx);
-        gsl_matrix_set(A, 3, 1, sy);
-        gsl_matrix_set(A, 3, 2, sz);
-        gsl_matrix_set(A, 3, 3, 6.0 * 256.0);
+            gsl_matrix *A = gsl_matrix_alloc(4, 4);
+            gsl_matrix_set(A, 0, 0, sxx);
+            gsl_matrix_set(A, 0, 1, sxy);
+            gsl_matrix_set(A, 0, 2, sxz);
+            gsl_matrix_set(A, 0, 3, sx * 256.0); // Note: the 256.0 scales the deltas so that they fit into an int16_t
+            gsl_matrix_set(A, 1, 0, sxy);
+            gsl_matrix_set(A, 1, 1, syy);
+            gsl_matrix_set(A, 1, 2, syz);
+            gsl_matrix_set(A, 1, 3, sy * 256.0);
+            gsl_matrix_set(A, 2, 0, sxz);
+            gsl_matrix_set(A, 2, 1, syz);
+            gsl_matrix_set(A, 2, 2, szz);
+            gsl_matrix_set(A, 2, 3, sz * 256.0);
+            gsl_matrix_set(A, 3, 0, sx);
+            gsl_matrix_set(A, 3, 1, sy);
+            gsl_matrix_set(A, 3, 2, sz);
+            gsl_matrix_set(A, 3, 3, 6.0 * 256.0);
 
-        // Build the result matrix
-        double sXx = + 9.81 * 0x01p23 * gravity1matrix[0]
-                     - 9.81 * 0x01p23 * gravity1matrix[3];
-        double sXy = + 9.81 * 0x01p23 * gravity1matrix[1]
-                     - 9.81 * 0x01p23 * gravity1matrix[4];
-        double sXz = + 9.81 * 0x01p23 * gravity1matrix[2]
-                     - 9.81 * 0x01p23 * gravity1matrix[5];
-        double sYx = + 9.81 * 0x01p23 * gravity1matrix[6]
-                     - 9.81 * 0x01p23 * gravity1matrix[9];
-        double sYy = + 9.81 * 0x01p23 * gravity1matrix[7]
-                     - 9.81 * 0x01p23 * gravity1matrix[10];
-        double sYz = + 9.81 * 0x01p23 * gravity1matrix[8]
-                     - 9.81 * 0x01p23 * gravity1matrix[11];
-        double sZx = + 9.81 * 0x01p23 * gravity1matrix[12]
-                     - 9.81 * 0x01p23 * gravity1matrix[15];
-        double sZy = + 9.81 * 0x01p23 * gravity1matrix[13]
-                     - 9.81 * 0x01p23 * gravity1matrix[16];
-        double sZz = + 9.81 * 0x01p23 * gravity1matrix[14]
-                     - 9.81 * 0x01p23 * gravity1matrix[17];
-        gsl_matrix *B = gsl_matrix_alloc(4, 3);
-        gsl_matrix_set(B, 0, 0, sXx);
-        gsl_matrix_set(B, 0, 1, sYx);
-        gsl_matrix_set(B, 0, 2, sZx);
-        gsl_matrix_set(B, 1, 0, sXy);
-        gsl_matrix_set(B, 1, 1, sYy);
-        gsl_matrix_set(B, 1, 2, sZy);
-        gsl_matrix_set(B, 2, 0, sXz);
-        gsl_matrix_set(B, 2, 1, sYz);
-        gsl_matrix_set(B, 2, 2, sZz);
-        gsl_matrix_set(B, 3, 0, 0.0);
-        gsl_matrix_set(B, 3, 1, 0.0);
-        gsl_matrix_set(B, 3, 2, 0.0);
+            // Build the result matrix
+            double sXx = + 9.81 * 0x01p23 * gravity1matrix[0]
+            - 9.81 * 0x01p23 * gravity1matrix[3];
+            double sXy = + 9.81 * 0x01p23 * gravity1matrix[1]
+            - 9.81 * 0x01p23 * gravity1matrix[4];
+            double sXz = + 9.81 * 0x01p23 * gravity1matrix[2]
+            - 9.81 * 0x01p23 * gravity1matrix[5];
+            double sYx = + 9.81 * 0x01p23 * gravity1matrix[6]
+            - 9.81 * 0x01p23 * gravity1matrix[9];
+            double sYy = + 9.81 * 0x01p23 * gravity1matrix[7]
+            - 9.81 * 0x01p23 * gravity1matrix[10];
+            double sYz = + 9.81 * 0x01p23 * gravity1matrix[8]
+            - 9.81 * 0x01p23 * gravity1matrix[11];
+            double sZx = + 9.81 * 0x01p23 * gravity1matrix[12]
+            - 9.81 * 0x01p23 * gravity1matrix[15];
+            double sZy = + 9.81 * 0x01p23 * gravity1matrix[13]
+            - 9.81 * 0x01p23 * gravity1matrix[16];
+            double sZz = + 9.81 * 0x01p23 * gravity1matrix[14]
+            - 9.81 * 0x01p23 * gravity1matrix[17];
+            gsl_matrix *B = gsl_matrix_alloc(4, 3);
+            gsl_matrix_set(B, 0, 0, sXx);
+            gsl_matrix_set(B, 0, 1, sYx);
+            gsl_matrix_set(B, 0, 2, sZx);
+            gsl_matrix_set(B, 1, 0, sXy);
+            gsl_matrix_set(B, 1, 1, sYy);
+            gsl_matrix_set(B, 1, 2, sZy);
+            gsl_matrix_set(B, 2, 0, sXz);
+            gsl_matrix_set(B, 2, 1, sYz);
+            gsl_matrix_set(B, 2, 2, sZz);
+            gsl_matrix_set(B, 3, 0, 0.0);
+            gsl_matrix_set(B, 3, 1, 0.0);
+            gsl_matrix_set(B, 3, 2, 0.0);
 
-        // Invert the coefficient matrix
-        gsl_permutation *p = gsl_permutation_alloc(4);
-        int s;
-        gsl_linalg_LU_decomp(A, p, &s);
-        gsl_matrix *Inv = gsl_matrix_alloc(4, 4);
-        gsl_linalg_LU_invert(A, p, Inv);
+            // Invert the coefficient matrix
+            gsl_permutation *p = gsl_permutation_alloc(4);
+            int s;
+            gsl_linalg_LU_decomp(A, p, &s);
+            gsl_matrix *Inv = gsl_matrix_alloc(4, 4);
+            gsl_linalg_LU_invert(A, p, Inv);
 
-        // Multiply inverse with result matrix
-        gsl_matrix *C = gsl_matrix_alloc(4, 3);
-        gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, Inv, B, 0.0, C);
+            // Multiply inverse with result matrix
+            gsl_matrix *C = gsl_matrix_alloc(4, 3);
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, Inv, B, 0.0, C);
 
-        /*//gsl_matrix_transpose(Inv);
-        // Apply scaling to m/s². Scale to fit in int16_t.
-        gsl_matrix_scale(Inv, 9.81 * 0x00800000);*/
-        for (int i = 0; i < 12; i ++) {
-            a1[i]->SetValue(wxString().Format("%0.0lf", gsl_matrix_get(C, i % 4, i / 4)));
+            /*//gsl_matrix_transpose(Inv);
+    // Apply scaling to m/s². Scale to fit in int16_t.
+    gsl_matrix_scale(Inv, 9.81 * 0x00800000);*/
+            for (int i = 0; i < 12; i ++) {
+                a1[i]->SetValue(wxString().Format("%0.0lf", gsl_matrix_get(C, i % 4, i / 4)));
+            }
+            gsl_matrix_free(C);
+            gsl_matrix_free(Inv);
+            gsl_permutation_free(p);
+            gsl_matrix_free(B);
+            gsl_matrix_free(A);
         }
-        gsl_matrix_free(C);
-        gsl_matrix_free(Inv);
-        gsl_permutation_free(p);
-        gsl_matrix_free(B);
-        gsl_matrix_free(A);
-    }
     );
 
     processAccel2->Bind(
         wxEVT_BUTTON,
-    [&](wxCommandEvent & evt) {
-//        // Refer to CrankAngleEstimate.odt - Transforming Sensor Data to Crank Reference Frame
-//        // Copy row based on orientation to the gravity matrix
-//        gravity2matrix[orientation->GetSelection() * 3 + 0] = accel2X_sum / accel2_num;
-//        gravity2matrix[orientation->GetSelection() * 3 + 1] = accel2Y_sum / accel2_num;
-//        gravity2matrix[orientation->GetSelection() * 3 + 2] = accel2Z_sum / accel2_num;
-//        // Invert the gravity matrix
-//        gsl_matrix *A = gsl_matrix_alloc(3, 3);
-//        gsl_matrix_view B = gsl_matrix_view_array(gravity2matrix, 3, 3);
-//        gsl_matrix_memcpy(A, &B.matrix);
-//        gsl_permutation *p = gsl_permutation_alloc(3);
-//        int s;
-//        gsl_linalg_LU_decomp(A, p, &s);
-//        gsl_matrix *Inv = gsl_matrix_alloc(3, 3);
-//        gsl_linalg_LU_invert(A, p, Inv);
-//        gsl_matrix_transpose(Inv);
-//        // Apply scaling to m/s²
-//        gsl_matrix_scale(Inv, 9.81 * 0x00800000);
-//        for (int i = 0; i < 9; i ++) {
-//            a2[i]->SetValue(wxString().Format("%0.0lf", gsl_matrix_get(Inv, i / 3, i % 3)));
-//        }
-//        gsl_matrix_free(Inv);
-//        gsl_permutation_free(p);
-//        gsl_matrix_free(A);
+        [&](wxCommandEvent & evt) {
+            //        // Refer to CrankAngleEstimate.odt - Transforming Sensor Data to Crank Reference Frame
+            //        // Copy row based on orientation to the gravity matrix
+            //        gravity2matrix[orientation->GetSelection() * 3 + 0] = accel2X_sum / accel2_num;
+            //        gravity2matrix[orientation->GetSelection() * 3 + 1] = accel2Y_sum / accel2_num;
+            //        gravity2matrix[orientation->GetSelection() * 3 + 2] = accel2Z_sum / accel2_num;
+            //        // Invert the gravity matrix
+            //        gsl_matrix *A = gsl_matrix_alloc(3, 3);
+            //        gsl_matrix_view B = gsl_matrix_view_array(gravity2matrix, 3, 3);
+            //        gsl_matrix_memcpy(A, &B.matrix);
+            //        gsl_permutation *p = gsl_permutation_alloc(3);
+            //        int s;
+            //        gsl_linalg_LU_decomp(A, p, &s);
+            //        gsl_matrix *Inv = gsl_matrix_alloc(3, 3);
+            //        gsl_linalg_LU_invert(A, p, Inv);
+            //        gsl_matrix_transpose(Inv);
+            //        // Apply scaling to m/s²
+            //        gsl_matrix_scale(Inv, 9.81 * 0x00800000);
+            //        for (int i = 0; i < 9; i ++) {
+            //            a2[i]->SetValue(wxString().Format("%0.0lf", gsl_matrix_get(Inv, i / 3, i % 3)));
+            //        }
+            //        gsl_matrix_free(Inv);
+            //        gsl_permutation_free(p);
+            //        gsl_matrix_free(A);
 
 
-        // Refer to CrankAngleEstimate.odt - Transforming Sensor Data to Crank Reference Frame
-        // Copy row based on orientation to the gravity matrix
-        gravity2matrix[orientation->GetSelection() * 3 + 0] = accel2X_sum / accel2_num;
-        gravity2matrix[orientation->GetSelection() * 3 + 1] = accel2Y_sum / accel2_num;
-        gravity2matrix[orientation->GetSelection() * 3 + 2] = accel2Z_sum / accel2_num;
+            // Refer to CrankAngleEstimate.odt - Transforming Sensor Data to Crank Reference Frame
+            // Copy row based on orientation to the gravity matrix
+            gravity2matrix[orientation->GetSelection() * 3 + 0] = accel2X_sum / accel2_num;
+            gravity2matrix[orientation->GetSelection() * 3 + 1] = accel2Y_sum / accel2_num;
+            gravity2matrix[orientation->GetSelection() * 3 + 2] = accel2Z_sum / accel2_num;
 
-        // Build the coefficient matrix
-        double sx = + gravity2matrix[0]
-                    + gravity2matrix[3]
-                    + gravity2matrix[6]
-                    + gravity2matrix[9]
-                    + gravity2matrix[12]
-                    + gravity2matrix[15];
-        double sy = + gravity2matrix[1]
-                    + gravity2matrix[4]
-                    + gravity2matrix[7]
-                    + gravity2matrix[10]
-                    + gravity2matrix[13]
-                    + gravity2matrix[16];
-        double sz = + gravity2matrix[2]
-                    + gravity2matrix[5]
-                    + gravity2matrix[8]
-                    + gravity2matrix[11]
-                    + gravity2matrix[14]
-                    + gravity2matrix[17];
-        double sxx = + gravity2matrix[0] * gravity2matrix[0]
-                     + gravity2matrix[3] * gravity2matrix[3]
-                     + gravity2matrix[6] * gravity2matrix[6]
-                     + gravity2matrix[9] * gravity2matrix[9]
-                     + gravity2matrix[12] * gravity2matrix[12]
-                     + gravity2matrix[15] * gravity2matrix[15];
-        double syy = + gravity2matrix[1] * gravity2matrix[1]
-                     + gravity2matrix[4] * gravity2matrix[4]
-                     + gravity2matrix[7] * gravity2matrix[7]
-                     + gravity2matrix[10] * gravity2matrix[10]
-                     + gravity2matrix[13] * gravity2matrix[13]
-                     + gravity2matrix[16] * gravity2matrix[16];
-        double szz = + gravity2matrix[2] * gravity2matrix[2]
-                     + gravity2matrix[5] * gravity2matrix[5]
-                     + gravity2matrix[8] * gravity2matrix[8]
-                     + gravity2matrix[11] * gravity2matrix[11]
-                     + gravity2matrix[14] * gravity2matrix[14]
-                     + gravity2matrix[17] * gravity2matrix[17];
-        double sxy = + gravity2matrix[0] * gravity2matrix[1]
-                     + gravity2matrix[3] * gravity2matrix[4]
-                     + gravity2matrix[6] * gravity2matrix[7]
-                     + gravity2matrix[9] * gravity2matrix[10]
-                     + gravity2matrix[12] * gravity2matrix[13]
-                     + gravity2matrix[15] * gravity2matrix[16];
-        double sxz = + gravity2matrix[0] * gravity2matrix[2]
-                     + gravity2matrix[3] * gravity2matrix[5]
-                     + gravity2matrix[6] * gravity2matrix[8]
-                     + gravity2matrix[9] * gravity2matrix[11]
-                     + gravity2matrix[12] * gravity2matrix[14]
-                     + gravity2matrix[15] * gravity2matrix[17];
-        double syz = + gravity2matrix[1] * gravity2matrix[2]
-                     + gravity2matrix[4] * gravity2matrix[5]
-                     + gravity2matrix[7] * gravity2matrix[8]
-                     + gravity2matrix[10] * gravity2matrix[11]
-                     + gravity2matrix[13] * gravity2matrix[14]
-                     + gravity2matrix[16] * gravity2matrix[17];
+            // Build the coefficient matrix
+            double sx = + gravity2matrix[0]
+            + gravity2matrix[3]
+            + gravity2matrix[6]
+            + gravity2matrix[9]
+            + gravity2matrix[12]
+            + gravity2matrix[15];
+            double sy = + gravity2matrix[1]
+            + gravity2matrix[4]
+            + gravity2matrix[7]
+            + gravity2matrix[10]
+            + gravity2matrix[13]
+            + gravity2matrix[16];
+            double sz = + gravity2matrix[2]
+            + gravity2matrix[5]
+            + gravity2matrix[8]
+            + gravity2matrix[11]
+            + gravity2matrix[14]
+            + gravity2matrix[17];
+            double sxx = + gravity2matrix[0] * gravity2matrix[0]
+            + gravity2matrix[3] * gravity2matrix[3]
+            + gravity2matrix[6] * gravity2matrix[6]
+            + gravity2matrix[9] * gravity2matrix[9]
+            + gravity2matrix[12] * gravity2matrix[12]
+            + gravity2matrix[15] * gravity2matrix[15];
+            double syy = + gravity2matrix[1] * gravity2matrix[1]
+            + gravity2matrix[4] * gravity2matrix[4]
+            + gravity2matrix[7] * gravity2matrix[7]
+            + gravity2matrix[10] * gravity2matrix[10]
+            + gravity2matrix[13] * gravity2matrix[13]
+            + gravity2matrix[16] * gravity2matrix[16];
+            double szz = + gravity2matrix[2] * gravity2matrix[2]
+            + gravity2matrix[5] * gravity2matrix[5]
+            + gravity2matrix[8] * gravity2matrix[8]
+            + gravity2matrix[11] * gravity2matrix[11]
+            + gravity2matrix[14] * gravity2matrix[14]
+            + gravity2matrix[17] * gravity2matrix[17];
+            double sxy = + gravity2matrix[0] * gravity2matrix[1]
+            + gravity2matrix[3] * gravity2matrix[4]
+            + gravity2matrix[6] * gravity2matrix[7]
+            + gravity2matrix[9] * gravity2matrix[10]
+            + gravity2matrix[12] * gravity2matrix[13]
+            + gravity2matrix[15] * gravity2matrix[16];
+            double sxz = + gravity2matrix[0] * gravity2matrix[2]
+            + gravity2matrix[3] * gravity2matrix[5]
+            + gravity2matrix[6] * gravity2matrix[8]
+            + gravity2matrix[9] * gravity2matrix[11]
+            + gravity2matrix[12] * gravity2matrix[14]
+            + gravity2matrix[15] * gravity2matrix[17];
+            double syz = + gravity2matrix[1] * gravity2matrix[2]
+            + gravity2matrix[4] * gravity2matrix[5]
+            + gravity2matrix[7] * gravity2matrix[8]
+            + gravity2matrix[10] * gravity2matrix[11]
+            + gravity2matrix[13] * gravity2matrix[14]
+            + gravity2matrix[16] * gravity2matrix[17];
 
-        gsl_matrix *A = gsl_matrix_alloc(4, 4);
-        gsl_matrix_set(A, 0, 0, sxx);
-        gsl_matrix_set(A, 0, 1, sxy);
-        gsl_matrix_set(A, 0, 2, sxz);
-        gsl_matrix_set(A, 0, 3, sx * 256.0); // Note: the 256.0 scales the deltas so that they fit into an int16_t
-        gsl_matrix_set(A, 1, 0, sxy);
-        gsl_matrix_set(A, 1, 1, syy);
-        gsl_matrix_set(A, 1, 2, syz);
-        gsl_matrix_set(A, 1, 3, sy * 256.0);
-        gsl_matrix_set(A, 2, 0, sxz);
-        gsl_matrix_set(A, 2, 1, syz);
-        gsl_matrix_set(A, 2, 2, szz);
-        gsl_matrix_set(A, 2, 3, sz * 256.0);
-        gsl_matrix_set(A, 3, 0, sx);
-        gsl_matrix_set(A, 3, 1, sy);
-        gsl_matrix_set(A, 3, 2, sz);
-        gsl_matrix_set(A, 3, 3, 6.0 * 256.0);
+            gsl_matrix *A = gsl_matrix_alloc(4, 4);
+            gsl_matrix_set(A, 0, 0, sxx);
+            gsl_matrix_set(A, 0, 1, sxy);
+            gsl_matrix_set(A, 0, 2, sxz);
+            gsl_matrix_set(A, 0, 3, sx * 256.0); // Note: the 256.0 scales the deltas so that they fit into an int16_t
+            gsl_matrix_set(A, 1, 0, sxy);
+            gsl_matrix_set(A, 1, 1, syy);
+            gsl_matrix_set(A, 1, 2, syz);
+            gsl_matrix_set(A, 1, 3, sy * 256.0);
+            gsl_matrix_set(A, 2, 0, sxz);
+            gsl_matrix_set(A, 2, 1, syz);
+            gsl_matrix_set(A, 2, 2, szz);
+            gsl_matrix_set(A, 2, 3, sz * 256.0);
+            gsl_matrix_set(A, 3, 0, sx);
+            gsl_matrix_set(A, 3, 1, sy);
+            gsl_matrix_set(A, 3, 2, sz);
+            gsl_matrix_set(A, 3, 3, 6.0 * 256.0);
 
-        // Build the result matrix
-        double sXx = + 9.81 * 0x01p23 * gravity2matrix[0]
-                     - 9.81 * 0x01p23 * gravity2matrix[3];
-        double sXy = + 9.81 * 0x01p23 * gravity2matrix[1]
-                     - 9.81 * 0x01p23 * gravity2matrix[4];
-        double sXz = + 9.81 * 0x01p23 * gravity2matrix[2]
-                     - 9.81 * 0x01p23 * gravity2matrix[5];
-        double sYx = + 9.81 * 0x01p23 * gravity2matrix[6]
-                     - 9.81 * 0x01p23 * gravity2matrix[9];
-        double sYy = + 9.81 * 0x01p23 * gravity2matrix[7]
-                     - 9.81 * 0x01p23 * gravity2matrix[10];
-        double sYz = + 9.81 * 0x01p23 * gravity2matrix[8]
-                     - 9.81 * 0x01p23 * gravity2matrix[11];
-        double sZx = + 9.81 * 0x01p23 * gravity2matrix[12]
-                     - 9.81 * 0x01p23 * gravity2matrix[15];
-        double sZy = + 9.81 * 0x01p23 * gravity2matrix[13]
-                     - 9.81 * 0x01p23 * gravity2matrix[16];
-        double sZz = + 9.81 * 0x01p23 * gravity2matrix[14]
-                     - 9.81 * 0x01p23 * gravity2matrix[17];
-        gsl_matrix *B = gsl_matrix_alloc(4, 3);
-        gsl_matrix_set(B, 0, 0, sXx);
-        gsl_matrix_set(B, 0, 1, sYx);
-        gsl_matrix_set(B, 0, 2, sZx);
-        gsl_matrix_set(B, 1, 0, sXy);
-        gsl_matrix_set(B, 1, 1, sYy);
-        gsl_matrix_set(B, 1, 2, sZy);
-        gsl_matrix_set(B, 2, 0, sXz);
-        gsl_matrix_set(B, 2, 1, sYz);
-        gsl_matrix_set(B, 2, 2, sZz);
-        gsl_matrix_set(B, 3, 0, 0.0);
-        gsl_matrix_set(B, 3, 1, 0.0);
-        gsl_matrix_set(B, 3, 2, 0.0);
+            // Build the result matrix
+            double sXx = + 9.81 * 0x01p23 * gravity2matrix[0]
+            - 9.81 * 0x01p23 * gravity2matrix[3];
+            double sXy = + 9.81 * 0x01p23 * gravity2matrix[1]
+            - 9.81 * 0x01p23 * gravity2matrix[4];
+            double sXz = + 9.81 * 0x01p23 * gravity2matrix[2]
+            - 9.81 * 0x01p23 * gravity2matrix[5];
+            double sYx = + 9.81 * 0x01p23 * gravity2matrix[6]
+            - 9.81 * 0x01p23 * gravity2matrix[9];
+            double sYy = + 9.81 * 0x01p23 * gravity2matrix[7]
+            - 9.81 * 0x01p23 * gravity2matrix[10];
+            double sYz = + 9.81 * 0x01p23 * gravity2matrix[8]
+            - 9.81 * 0x01p23 * gravity2matrix[11];
+            double sZx = + 9.81 * 0x01p23 * gravity2matrix[12]
+            - 9.81 * 0x01p23 * gravity2matrix[15];
+            double sZy = + 9.81 * 0x01p23 * gravity2matrix[13]
+            - 9.81 * 0x01p23 * gravity2matrix[16];
+            double sZz = + 9.81 * 0x01p23 * gravity2matrix[14]
+            - 9.81 * 0x01p23 * gravity2matrix[17];
+            gsl_matrix *B = gsl_matrix_alloc(4, 3);
+            gsl_matrix_set(B, 0, 0, sXx);
+            gsl_matrix_set(B, 0, 1, sYx);
+            gsl_matrix_set(B, 0, 2, sZx);
+            gsl_matrix_set(B, 1, 0, sXy);
+            gsl_matrix_set(B, 1, 1, sYy);
+            gsl_matrix_set(B, 1, 2, sZy);
+            gsl_matrix_set(B, 2, 0, sXz);
+            gsl_matrix_set(B, 2, 1, sYz);
+            gsl_matrix_set(B, 2, 2, sZz);
+            gsl_matrix_set(B, 3, 0, 0.0);
+            gsl_matrix_set(B, 3, 1, 0.0);
+            gsl_matrix_set(B, 3, 2, 0.0);
 
-        // Invert the coefficient matrix
-        gsl_permutation *p = gsl_permutation_alloc(4);
-        int s;
-        gsl_linalg_LU_decomp(A, p, &s);
-        gsl_matrix *Inv = gsl_matrix_alloc(4, 4);
-        gsl_linalg_LU_invert(A, p, Inv);
+            // Invert the coefficient matrix
+            gsl_permutation *p = gsl_permutation_alloc(4);
+            int s;
+            gsl_linalg_LU_decomp(A, p, &s);
+            gsl_matrix *Inv = gsl_matrix_alloc(4, 4);
+            gsl_linalg_LU_invert(A, p, Inv);
 
-        // Multiply inverse with result matrix
-        gsl_matrix *C = gsl_matrix_alloc(4, 3);
-        gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, Inv, B, 0.0, C);
+            // Multiply inverse with result matrix
+            gsl_matrix *C = gsl_matrix_alloc(4, 3);
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, Inv, B, 0.0, C);
 
-        /*//gsl_matrix_transpose(Inv);
-        // Apply scaling to m/s². Scale to fit in int16_t.
-        gsl_matrix_scale(Inv, 9.81 * 0x00800000);*/
-        for (int i = 0; i < 12; i ++) {
-            a2[i]->SetValue(wxString().Format("%0.0lf", gsl_matrix_get(C, i % 4, i / 4)));
+            /*//gsl_matrix_transpose(Inv);
+    // Apply scaling to m/s². Scale to fit in int16_t.
+    gsl_matrix_scale(Inv, 9.81 * 0x00800000);*/
+            for (int i = 0; i < 12; i ++) {
+                a2[i]->SetValue(wxString().Format("%0.0lf", gsl_matrix_get(C, i % 4, i / 4)));
+            }
+            gsl_matrix_free(C);
+            gsl_matrix_free(Inv);
+            gsl_permutation_free(p);
+            gsl_matrix_free(B);
+            gsl_matrix_free(A);
+
         }
-        gsl_matrix_free(C);
-        gsl_matrix_free(Inv);
-        gsl_permutation_free(p);
-        gsl_matrix_free(B);
-        gsl_matrix_free(A);
-
-    }
     );
 
     notifyRaw->Bind(wxEVT_TOGGLEBUTTON, [&](wxCommandEvent & evt) {
         switch (evt.GetInt()) {
-        case TRUE:
-            ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
-            SendCommand("Notify raw on\n");
-            break;
-        case FALSE:
-            ((wxToggleButton *) evt.GetEventObject())->SetLabel("Notify");
-            SendCommand("Notify raw off\n");
-            break;
+            case TRUE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
+                SendCommand("Notify raw on\n");
+                break;
+            case FALSE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Notify");
+                SendCommand("Notify raw off\n");
+                break;
         }
     });
     logFileRaw->Bind(wxEVT_BUTTON, &IC2Frame::LogFileName, this, wxID_ANY, wxID_ANY, new FileDialogParameters("raw.log", loggingRaw));
-//    loggingRaw->Bind(wxEVT_CHECKBOX, &IC2Frame::LogFileOpen, this, wxID_ANY, wxID_ANY, new LogFile(&logRaw));
+    //    loggingRaw->Bind(wxEVT_CHECKBOX, &IC2Frame::LogFileOpen, this, wxID_ANY, wxID_ANY, new LogFile(&logRaw));
 
 
     loggingRaw->Bind(wxEVT_CHECKBOX,
-    [&](wxCommandEvent & evt) {
-        wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
-        if (checkBox->IsChecked()) {
-//            logMeasurement.Create(checkBox->GetLabel(), true);
-            logRaw.Open(checkBox->GetLabel(), wxFile::write);
-        } else {
-            logRaw.Close();
-        }
-    });
+                     [&](wxCommandEvent & evt) {
+                         wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
+                         if (checkBox->IsChecked()) {
+                             //            logMeasurement.Create(checkBox->GetLabel(), true);
+                             logRaw.Open(checkBox->GetLabel(), wxFile::write);
+                         } else {
+                             logRaw.Close();
+                         }
+                     });
+
+    features->Layout();
 
     // Layout the page
     {
@@ -1778,7 +1571,7 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
         }
 
 
-//        sizer->AddStretchSpacer();
+        //        sizer->AddStretchSpacer();
         sizer->AddStretchSpacer();
         sizer->AddStretchSpacer();
 
@@ -1799,9 +1592,18 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     }
 
     // InfoCrank graphics
-//    crank_timer = new CrankTimer(crank_graphics);
-//    crank_timer->Start(10);
+    //    crank_timer = new CrankTimer(crank_graphics);
+    //    crank_timer->Start(10);
+    Layout();
+    Fit();
+    Show();
 
+    wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
+    disconnectCountdownLabel = new wxStaticText(page12, wxID_ANY, "Disconnect in: 60s");
+    mainSizer->Add(disconnectCountdownLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    countdownTimer = new wxTimer(this ,wxID_ANY);
+    countdownSeconds = 60;
+    countdownTimer->Start(1000);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1966,7 +1768,7 @@ void IC2Frame::AddDevice(const char *name, const char *address)
 {
     printf("\n%d %s %s\n", __LINE__, __FUNCTION__, __FILE__);
     BLEDevice *device = new BLEDevice(this, devices, name, address);
-//    wxSizerItem *sizerItem = devicesSizer->Add((wxSizer *) device, 0, /*wxGROW |*/ wxALL, 20, device->userData);
+    //    wxSizerItem *sizerItem = devicesSizer->Add((wxSizer *) device, 0, /*wxGROW |*/ wxALL, 20, device->userData);
     wxSizerItem *sizerItem = devicesSizer->Add((wxSizer *) device, 0, /*wxGROW |*/ wxALL, 20, new BLEDevice::UserData(address));
     printf("sizerItem: %p\n", sizerItem);
     printf("sizerItem->IsWindow(): %d\n", sizerItem->IsWindow());
@@ -1999,8 +1801,8 @@ void IC2Frame::RemoveDevice(const char *address)
 
         if (!strcmp(((BLEDevice::UserData *) userData)->address, address)) {
             printf("Match on address: %s\n", address);
-//            printf("about to: unbind\n");
-//            printf("%d\n", device->button->Unbind(wxEVT_BUTTON, &IC2Frame::OnConnect, this));
+            //            printf("about to: unbind\n");
+            //            printf("%d\n", device->button->Unbind(wxEVT_BUTTON, &IC2Frame::OnConnect, this));
             printf("about to: clear\n");
             device->Clear(TRUE);
             printf("about to: devicesSizer->Remove(i)\n");
@@ -2128,24 +1930,24 @@ void IC2Frame::SetIEEE(const char *str)
 void IC2Frame::SetPNP(void *str)
 {
     printf("\n%d %s %s\n", __LINE__, __FUNCTION__, __FILE__);
-#pragma pack(push, 1)
+    #pragma pack(push, 1)
     struct pnp_data {
         uint8_t vendor_id_source;
         uint16_t vendor_id;
         uint16_t product_id;
         uint16_t product_version;
     } *pnp_data = (struct pnp_data *) str;
-#pragma pack(pop)
+    #pragma pack(pop)
     switch (pnp_data->vendor_id_source) {
-    case 0x01:
-        PNPVendorIDSource->SetLabel("Bluetooth SIG");
-        break;
-    case 0x02:
-        PNPVendorIDSource->SetLabel("USB Implementer's");
-        break;
-    default:
-        PNPVendorIDSource->SetLabel("Unknown");
-        break;
+        case 0x01:
+            PNPVendorIDSource->SetLabel("Bluetooth SIG");
+            break;
+        case 0x02:
+            PNPVendorIDSource->SetLabel("USB Implementer's");
+            break;
+        default:
+            PNPVendorIDSource->SetLabel("Unknown");
+            break;
     }
     char cmd[20];
     sprintf(cmd, "0x%04x", pnp_data->vendor_id);
@@ -2164,7 +1966,7 @@ void IC2Frame::SetPNP(void *str)
 void IC2Frame::SetCyclingPowerFeature(void *str)
 {
     printf("\n%d %s %s\n", __LINE__, __FUNCTION__, __FILE__);
-#pragma pack(push, 1)
+    #pragma pack(push, 1)
     struct cycling_power_feature_data {
         uint32_t pedal_power_balance_supported: 1;
         uint32_t accumulated_torque_supported: 1;
@@ -2188,7 +1990,7 @@ void IC2Frame::SetCyclingPowerFeature(void *str)
         uint32_t enhanced_offset_compensation_procedure_supported: 1;
         uint32_t distributed_system_support: 2;
     } *feature = (struct cycling_power_feature_data *) str;
-#pragma pack(pop)
+    #pragma pack(pop)
     balanceFeature->SetValue(feature->pedal_power_balance_supported);
     torqueFeature->SetValue(feature->accumulated_torque_supported);
     wheelRevolutionFeature->SetValue(feature->wheel_revolution_data_supported);
@@ -2211,22 +2013,22 @@ void IC2Frame::SetCyclingPowerFeature(void *str)
     enhancedCompensationFeature->SetValue(feature->enhanced_offset_compensation_procedure_supported);
     char dis[40];
     switch (feature->distributed_system_support) {
-    case 0x00:
-        strcpy(dis, "Unspecified");
-        ;
-        break;
-    case 0x01:
-        strcpy(dis, "Not for use in a distributed system");
-        ;
-        break;
-    case 0x02:
-        strcpy(dis, "For use in a distributed system");
-        ;
-        break;
-    default:
-        strcpy(dis, "RFU");
-        ;
-        break;
+        case 0x00:
+            strcpy(dis, "Unspecified");
+            ;
+            break;
+        case 0x01:
+            strcpy(dis, "Not for use in a distributed system");
+            ;
+            break;
+        case 0x02:
+            strcpy(dis, "For use in a distributed system");
+            ;
+            break;
+        default:
+            strcpy(dis, "RFU");
+            ;
+            break;
     }
     distributedFeature->SetLabel(dis);
 }
@@ -2265,7 +2067,7 @@ void IC2Frame::SetCyclingPowerMeasurement(void *str, int length)
 
     uint8_t index = 2;
 
-#pragma pack(push, 1)
+    #pragma pack(push, 1)
     struct cycling_power_measurement_flags {
         uint16_t pedal_power_balance_present: 1;
         uint16_t pedal_power_balance_reference: 1;
@@ -2281,7 +2083,7 @@ void IC2Frame::SetCyclingPowerMeasurement(void *str, int length)
         uint16_t accumulated_energy_present: 1;
         uint16_t offset_compensation_indicator: 1;
     } *flags = (struct cycling_power_measurement_flags *) str;
-#pragma pack(pop)
+    #pragma pack(pop)
 
     int16_t *instantaneous_power = (int16_t *)(((uint8_t *) str) + index);
 
@@ -2323,12 +2125,12 @@ void IC2Frame::SetCyclingPowerMeasurement(void *str, int length)
 
     if (flags->wheel_revolution_data_present) {
         wheelRevolutionDataPresent->SetValue(true);
-#pragma pack(push,1)
+        #pragma pack(push,1)
         struct wheel_revolution_data_s {
             uint32_t cumulative_wheel_revolutions;
             uint16_t last_wheel_event_time;
         } *wheel_revolution_data = (struct wheel_revolution_data_s *)(((uint8_t *) str) + index);
-#pragma pack(pop)
+        #pragma pack(pop)
         cumulativeWheelRevolutions->SetLabel(wxString().Format("%u", wheel_revolution_data->cumulative_wheel_revolutions));
         lastWheelEventTime->SetLabel(wxString().Format("%hu s/2048", wheel_revolution_data->last_wheel_event_time));
         static uint32_t previous_cumulative_wheel_revolutions = 0;
@@ -2343,12 +2145,12 @@ void IC2Frame::SetCyclingPowerMeasurement(void *str, int length)
 
     if (flags->crank_revolution_data_present) {
         crankRevolutionDataPresent->SetValue(true);
-#pragma pack(push,1)
+        #pragma pack(push,1)
         struct crank_revolution_data_s {
             uint16_t cumulative_crank_revolutions;
             uint16_t last_crank_event_time;
         } *crank_revolution_data = (struct crank_revolution_data_s *)(((uint8_t *) str) + index);
-#pragma pack(pop)
+        #pragma pack(pop)
         cumulativeCrankRevolutions->SetLabel(wxString().Format("%hu", crank_revolution_data->cumulative_crank_revolutions));
         lastCrankEventTime->SetLabel(wxString().Format("%hu s/1024", crank_revolution_data->last_crank_event_time));
         static uint16_t previous_cumulative_crank_revolutions = 0;
@@ -2363,12 +2165,12 @@ void IC2Frame::SetCyclingPowerMeasurement(void *str, int length)
 
     if (flags->extreme_force_magnitudes_present) {
         extremeForceMagnitudesPresent->SetValue(true);
-#pragma pack(push,1)
+        #pragma pack(push,1)
         struct extreme_force_magnitudes_s {
             int16_t maximum_force_magnitude;
             int16_t minimum_force_magnitude;
         } *extreme_force_magnitudes = (struct extreme_force_magnitudes_s *)(((uint8_t *) str) + index);
-#pragma pack(pop)
+        #pragma pack(pop)
         maximumForceMagnitude->SetLabel(wxString().Format("%hd N", extreme_force_magnitudes->maximum_force_magnitude));
         minimumForceMagnitude->SetLabel(wxString().Format("%hd N", extreme_force_magnitudes->minimum_force_magnitude));
         index += sizeof(struct extreme_force_magnitudes_s);
@@ -2378,12 +2180,12 @@ void IC2Frame::SetCyclingPowerMeasurement(void *str, int length)
 
     if (flags->extreme_torque_magnitudes_present) {
         extremeTorqueMagnitudesPresent->SetValue(true);
-#pragma pack(push,1)
+        #pragma pack(push,1)
         struct extreme_torque_magnitudes_s {
             int16_t maximum_torque_magnitude;
             int16_t minimum_torque_magnitude;
         } *extreme_torque_magnitudes = (struct extreme_torque_magnitudes_s *)(((uint8_t *) str) + index);
-#pragma pack(pop)
+        #pragma pack(pop)
         maximumTorqueMagnitude->SetLabel(wxString().Format("%0.2f N.m", extreme_torque_magnitudes->maximum_torque_magnitude / 32.0f));
         minimumTorqueMagnitude->SetLabel(wxString().Format("%0.2f N.m", extreme_torque_magnitudes->minimum_torque_magnitude / 32.0f));
         index += sizeof(struct extreme_torque_magnitudes_s);
@@ -2394,12 +2196,12 @@ void IC2Frame::SetCyclingPowerMeasurement(void *str, int length)
     printf("about to extreme angles\n");
     if (flags->extreme_angles_present) {
         extremeAnglesPresent->SetValue(true);
-#pragma pack(push,1)
+        #pragma pack(push,1)
         struct extreme_angles_s {
             uint32_t maximum_angle: 12;
             uint32_t minimum_angle: 12;
         } *extreme_angles = (struct extreme_angles_s *)(((uint8_t *) str) + index);
-#pragma pack(pop)
+        #pragma pack(pop)
         printf("sizeof(struct extreme_angles_s) %lu\n", sizeof(struct extreme_angles_s));
         maximumAngle->SetLabel(wxString().Format(L"%hu°", extreme_angles->maximum_angle));
         minimumAngle->SetLabel(wxString().Format(L"%hu°", extreme_angles->minimum_angle));
@@ -2471,14 +2273,14 @@ struct IC2Frame::sensorLocations_s IC2Frame::sensorLocations[17] = {
 void IC2Frame::SetCyclingPowerControlPoint(void *str, int length)
 {
     printf("\n%d %s %s\n", __LINE__, __FUNCTION__, __FILE__);
-#pragma pack(push, 1)
+    #pragma pack(push, 1)
     struct control_point_data {
         uint8_t op_code;
         uint8_t request_code;
         uint8_t response_code;
         uint8_t data[];
     } *cp_data = (struct control_point_data *) str;
-#pragma pack(pop)
+    #pragma pack(pop)
 
     enum op_codes {
         SET_CUMULATIVE_VALUE = 1,
@@ -2511,55 +2313,55 @@ void IC2Frame::SetCyclingPowerControlPoint(void *str, int length)
         return;
     }
     switch (cp_data->response_code) {
-    case SUCCESS:
-        SetStatusText("Success", 1);
-        break;
-    case NOT_SUPPORTED:
-        SetStatusText("Failed - Not supported", 1);
-        return;
-    case INVALID_OPERAND:
-        SetStatusText("Failed - Invalid operand", 1);
-        return;
-    case OPERATION_FAILED:
-        SetStatusText("Failed - Operation failed", 1);
-        return;
-    default:
-        SetStatusText("Failed - Unknown response", 1);
-        return;
+        case SUCCESS:
+            SetStatusText("Success", 1);
+            break;
+        case NOT_SUPPORTED:
+            SetStatusText("Failed - Not supported", 1);
+            return;
+        case INVALID_OPERAND:
+            SetStatusText("Failed - Invalid operand", 1);
+            return;
+        case OPERATION_FAILED:
+            SetStatusText("Failed - Operation failed", 1);
+            return;
+        default:
+            SetStatusText("Failed - Unknown response", 1);
+            return;
     }
     wxString fmt;
     switch (cp_data->request_code) {
-    case REQUEST_SUPPORTED_SENSOR_LOCATIONS:
-        location->Clear();
-        for (int i = 3; i < length; i++) {
-            location->Append(sensorLocations[cp_data->data[i - 3]].location, &sensorLocations[cp_data->data[i - 3]].index);
-        }
-        break;
-    case REQUEST_CRANK_LENGTH:
-        crankLength->SetValue(wxString() << (*((uint16_t *) cp_data->data)) / 2.0);
-        break;
-    case REQUEST_CHAIN_LENGTH:
-        chainLength->SetValue(wxString() << (*((uint16_t *) cp_data->data)));
-        break;
-    case REQUEST_CHAIN_WEIGHT:
-        chainWeight->SetValue(wxString() << (*((uint16_t *) cp_data->data)));
-        break;
-    case REQUEST_SPAN_LENGTH:
-        span->SetValue(wxString() << (*((uint16_t *) cp_data->data)));
-        break;
-    case START_OFFSET_COMPENSATION:
-        offsetCompensationValue->SetLabel(wxString().Format("%0.2f N.m", (*((int16_t *) cp_data->data)) / 32.0f));
-        break;
-    case REQUEST_SAMPLING_RATE:
-        samplingRate->SetLabel(wxString().Format("%hhu Hz", *((uint8_t *) cp_data->data)));
-        break;
-    case REQUEST_FACTORY_CALIBRATION_DATE:
-        fmt.Printf("%04hu-%02hhu-%02hhu %02hhu:%02hhu:%02hhu", *((uint16_t *) cp_data->data), cp_data->data[2], cp_data->data[3], cp_data->data[4], cp_data->data[5], cp_data->data[6]);
-        calibrationDate->SetLabel(fmt);
-        break;
-    case START_ENHANCED_OFFSET_COMPENSATION:
-        enhancedOffsetCompensationValue->SetLabel(wxString().Format("%0.2f N.m", (*((int16_t *) cp_data->data)) / 32.0f));
-        break;
+        case REQUEST_SUPPORTED_SENSOR_LOCATIONS:
+            location->Clear();
+            for (int i = 3; i < length; i++) {
+                location->Append(sensorLocations[cp_data->data[i - 3]].location, &sensorLocations[cp_data->data[i - 3]].index);
+            }
+            break;
+        case REQUEST_CRANK_LENGTH:
+            crankLength->SetValue(wxString() << (*((uint16_t *) cp_data->data)) / 2.0);
+            break;
+        case REQUEST_CHAIN_LENGTH:
+            chainLength->SetValue(wxString() << (*((uint16_t *) cp_data->data)));
+            break;
+        case REQUEST_CHAIN_WEIGHT:
+            chainWeight->SetValue(wxString() << (*((uint16_t *) cp_data->data)));
+            break;
+        case REQUEST_SPAN_LENGTH:
+            span->SetValue(wxString() << (*((uint16_t *) cp_data->data)));
+            break;
+        case START_OFFSET_COMPENSATION:
+            offsetCompensationValue->SetLabel(wxString().Format("%0.2f N.m", (*((int16_t *) cp_data->data)) / 32.0f));
+            break;
+        case REQUEST_SAMPLING_RATE:
+            samplingRate->SetLabel(wxString().Format("%hhu Hz", *((uint8_t *) cp_data->data)));
+            break;
+        case REQUEST_FACTORY_CALIBRATION_DATE:
+            fmt.Printf("%04hu-%02hhu-%02hhu %02hhu:%02hhu:%02hhu", *((uint16_t *) cp_data->data), cp_data->data[2], cp_data->data[3], cp_data->data[4], cp_data->data[5], cp_data->data[6]);
+            calibrationDate->SetLabel(fmt);
+            break;
+        case START_ENHANCED_OFFSET_COMPENSATION:
+            enhancedOffsetCompensationValue->SetLabel(wxString().Format("%0.2f N.m", (*((int16_t *) cp_data->data)) / 32.0f));
+            break;
     }
 
 
@@ -2784,7 +2586,7 @@ void IC2Frame::SetCyclingPowerVector(void *str, int length)
 
     uint8_t index = 1;
 
-#pragma pack(push, 1)
+    #pragma pack(push, 1)
     struct cycling_power_vector_flags {
         uint8_t crank_revolution_data_present: 1;
         uint8_t first_crank_measurement_angle_present: 1;
@@ -2792,7 +2594,7 @@ void IC2Frame::SetCyclingPowerVector(void *str, int length)
         uint8_t instantaneous_torque_magnitude_array_present: 1;
         uint8_t instantaneous_measurement_direction: 2;
     } *flags = (struct cycling_power_vector_flags *) str;
-#pragma pack(pop)
+    #pragma pack(pop)
 
     char direction[][21] = {"Unknown", "Tangential Component", "Radial Component", "Lateral Component"};
 
@@ -2800,12 +2602,12 @@ void IC2Frame::SetCyclingPowerVector(void *str, int length)
 
     if (flags->crank_revolution_data_present) {
         crankRevolutionDataVectorPresent->SetValue(true);
-#pragma pack(push,1)
+        #pragma pack(push,1)
         struct crank_revolution_data_s {
             uint16_t cumulative_crank_revolutions;
             uint16_t last_crank_event_time;
         } *crank_revolution_data = (struct crank_revolution_data_s *)(((uint8_t *) str) + index);
-#pragma pack(pop)
+        #pragma pack(pop)
         cumulativeCrankVectorRevolutions->SetLabel(wxString().Format("%hu", crank_revolution_data->cumulative_crank_revolutions));
         lastCrankEventVectorTime->SetLabel(wxString().Format("%hu s/1024", crank_revolution_data->last_crank_event_time));
         index += sizeof(struct crank_revolution_data_s);
@@ -2861,14 +2663,14 @@ void IC2Frame::SetCyclingPowerVector(void *str, int length)
 void IC2Frame::SetInfoCrankControlPoint(void *str, int length)
 {
     printf("\n%d %s %s\n", __LINE__, __FUNCTION__, __FILE__);
-#pragma pack(push, 1)
+    #pragma pack(push, 1)
     struct control_point_data {
         uint8_t op_code;
         uint8_t request_code;
         uint8_t response_code;
         uint8_t data[];
     } *cp_data = (struct control_point_data *) str;
-#pragma pack(pop)
+    #pragma pack(pop)
 
     enum op_codes {
         SET_SERIAL_NUMBER = 1,
@@ -2900,78 +2702,78 @@ void IC2Frame::SetInfoCrankControlPoint(void *str, int length)
         return;
     }
     switch (cp_data->response_code) {
-    case SUCCESS:
-        SetStatusText("Success", 1);
-        break;
-    case NOT_SUPPORTED:
-        SetStatusText("Failed - Not supported", 1);
-        return;
-    case INVALID_OPERAND:
-        SetStatusText("Failed - Invalid operand", 1);
-        return;
-    case OPERATION_FAILED:
-        SetStatusText("Failed - Operation failed", 1);
-        return;
-    default:
-        SetStatusText("Failed - Unknown response", 1);
-        return;
+        case SUCCESS:
+            SetStatusText("Success", 1);
+            break;
+        case NOT_SUPPORTED:
+            SetStatusText("Failed - Not supported", 1);
+            return;
+        case INVALID_OPERAND:
+            SetStatusText("Failed - Invalid operand", 1);
+            return;
+        case OPERATION_FAILED:
+            SetStatusText("Failed - Operation failed", 1);
+            return;
+        default:
+            SetStatusText("Failed - Unknown response", 1);
+            return;
     }
     switch (cp_data->request_code) {
-    case REQUEST_CALIBRATION_PARAMETERS:
-        k1->SetValue(wxString().Format("%f", *((float *) &cp_data->data[0])));
-        k2->SetValue(wxString().Format("%f", *((float *) &cp_data->data[4])));
-        k3->SetValue(wxString().Format("%f", *((float *) &cp_data->data[8])));
-        k4->SetValue(wxString().Format("%f", *((float *) &cp_data->data[12])));
-        k5->SetValue(wxString().Format("%f", *((float *) &cp_data->data[16])));
-        k6->SetValue(wxString().Format("%f", *((float *) &cp_data->data[20])));
-        break;
-    case REQUEST_ACCEL1_TRANSFORM:
-        a1[0]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[0])));
-        a1[1]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[2])));
-        a1[2]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[4])));
-        a1[3]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[6])));
-        a1[4]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[8])));
-        a1[5]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[10])));
-        a1[6]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[12])));
-        a1[7]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[14])));
-        a1[8]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[16])));
-        a1[9]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[18])));
-        a1[10]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[20])));
-        a1[11]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[22])));
-        break;
-    case REQUEST_ACCEL2_TRANSFORM:
-        a2[0]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[0])));
-        a2[1]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[2])));
-        a2[2]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[4])));
-        a2[3]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[6])));
-        a2[4]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[8])));
-        a2[5]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[10])));
-        a2[6]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[12])));
-        a2[7]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[14])));
-        a2[8]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[16])));
-        a2[9]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[18])));
-        a2[10]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[20])));
-        a2[11]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[22])));
-        break;
-    case REQUEST_KF_PARAMETERS:
-        s2alpha->SetValue(wxString().Format("%0.4f", *((float *) &cp_data->data[0])));
-        s2accel->SetValue(wxString().Format("%0.4f", *((float *) &cp_data->data[4])));
-        driveRatio->SetValue(wxString().Format("%0.2f", *((float *) &cp_data->data[8])));
-        r1->SetValue(wxString().Format("%0.4f", *((float *) &cp_data->data[12])));
-        r2->SetValue(wxString().Format("%0.4f", *((float *) &cp_data->data[16])));
-        break;
-    case REQUEST_PARTNER_ADDRESS:
-        ble_addr[0]->SetValue(wxString().Format("%02hhX", cp_data->data[0]));
-        ble_addr[1]->SetValue(wxString().Format("%02hhX", cp_data->data[1]));
-        ble_addr[2]->SetValue(wxString().Format("%02hhX", cp_data->data[2]));
-        ble_addr[3]->SetValue(wxString().Format("%02hhX", cp_data->data[3]));
-        ble_addr[4]->SetValue(wxString().Format("%02hhX", cp_data->data[4]));
-        ble_addr[5]->SetValue(wxString().Format("%02hhX", cp_data->data[5]));
-        break;
-    case REQUEST_CYCLING_POWER_VECTOR_PARAMETERS:
-        cpvSize->SetValue(wxString().Format("%hhu", cp_data->data[0]));
-        cpvDownsample->SetValue(wxString().Format("%hhu", cp_data->data[1]));
-        break;
+        case REQUEST_CALIBRATION_PARAMETERS:
+            k1->SetValue(wxString().Format("%f", *((float *) &cp_data->data[0])));
+            k2->SetValue(wxString().Format("%f", *((float *) &cp_data->data[4])));
+            k3->SetValue(wxString().Format("%f", *((float *) &cp_data->data[8])));
+            k4->SetValue(wxString().Format("%f", *((float *) &cp_data->data[12])));
+            k5->SetValue(wxString().Format("%f", *((float *) &cp_data->data[16])));
+            k6->SetValue(wxString().Format("%f", *((float *) &cp_data->data[20])));
+            break;
+        case REQUEST_ACCEL1_TRANSFORM:
+            a1[0]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[0])));
+            a1[1]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[2])));
+            a1[2]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[4])));
+            a1[3]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[6])));
+            a1[4]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[8])));
+            a1[5]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[10])));
+            a1[6]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[12])));
+            a1[7]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[14])));
+            a1[8]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[16])));
+            a1[9]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[18])));
+            a1[10]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[20])));
+            a1[11]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[22])));
+            break;
+        case REQUEST_ACCEL2_TRANSFORM:
+            a2[0]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[0])));
+            a2[1]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[2])));
+            a2[2]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[4])));
+            a2[3]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[6])));
+            a2[4]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[8])));
+            a2[5]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[10])));
+            a2[6]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[12])));
+            a2[7]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[14])));
+            a2[8]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[16])));
+            a2[9]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[18])));
+            a2[10]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[20])));
+            a2[11]->SetValue(wxString().Format("%hd", *((int16_t *) &cp_data->data[22])));
+            break;
+        case REQUEST_KF_PARAMETERS:
+            s2alpha->SetValue(wxString().Format("%0.4f", *((float *) &cp_data->data[0])));
+            s2accel->SetValue(wxString().Format("%0.4f", *((float *) &cp_data->data[4])));
+            driveRatio->SetValue(wxString().Format("%0.2f", *((float *) &cp_data->data[8])));
+            r1->SetValue(wxString().Format("%0.4f", *((float *) &cp_data->data[12])));
+            r2->SetValue(wxString().Format("%0.4f", *((float *) &cp_data->data[16])));
+            break;
+        case REQUEST_PARTNER_ADDRESS:
+            ble_addr[0]->SetValue(wxString().Format("%02hhX", cp_data->data[0]));
+            ble_addr[1]->SetValue(wxString().Format("%02hhX", cp_data->data[1]));
+            ble_addr[2]->SetValue(wxString().Format("%02hhX", cp_data->data[2]));
+            ble_addr[3]->SetValue(wxString().Format("%02hhX", cp_data->data[3]));
+            ble_addr[4]->SetValue(wxString().Format("%02hhX", cp_data->data[4]));
+            ble_addr[5]->SetValue(wxString().Format("%02hhX", cp_data->data[5]));
+            break;
+        case REQUEST_CYCLING_POWER_VECTOR_PARAMETERS:
+            cpvSize->SetValue(wxString().Format("%hhu", cp_data->data[0]));
+            cpvDownsample->SetValue(wxString().Format("%hhu", cp_data->data[1]));
+            break;
     }
 }
 
@@ -3025,7 +2827,7 @@ void IC2Frame::SetInfoCrankRawData(void *str, int length)
     if (logRaw.IsOpened()) {
         logRaw.Write(str, length);
     }
-#pragma pack(push, 1)
+    #pragma pack(push, 1)
     struct raw_data {
         uint8_t op_code;
         union {
@@ -3056,7 +2858,7 @@ void IC2Frame::SetInfoCrankRawData(void *str, int length)
         } data;
     } *raw_data = (struct raw_data *) str;
     uint8_t *byte_pointer_to_raw_data = (uint8_t *) raw_data;
-#pragma pack(pop)
+    #pragma pack(pop)
 
     enum op_codes {
         STRAIN_DATA = 0,
@@ -3069,153 +2871,153 @@ void IC2Frame::SetInfoCrankRawData(void *str, int length)
     };
     while (length) {
         switch (raw_data->op_code) {
-        case STRAIN_DATA:
-            strain_num ++;
-            strain_sum += raw_data->data.strain.strain;
-            strain_sum2 += (long)(raw_data->data.strain.strain) * (long)(raw_data->data.strain.strain);
-            {
-                double mean = (double) strain_sum / (double) strain_num;
-                double sd = pow((double) strain_sum2 / (double) strain_num - mean*mean, 0.5);
-                strain->SetValue(wxString().Format("%d", raw_data->data.strain.strain));
-                strain_avg->SetValue(wxString().Format("%0.3lf", mean));
-                strain_sd->SetValue(wxString().Format("%0.3lf", sd));
-            }
-            length -= 4;
-            byte_pointer_to_raw_data += 4;
-            raw_data = (struct raw_data *) byte_pointer_to_raw_data;
-            break;
-        case ACCELERATION_DATA:
-            accel1_num ++;
-            accel1X_sum += raw_data->data.acceleration.accel1_x;
-            accel1X_sum2 += (raw_data->data.acceleration.accel1_x) * (raw_data->data.acceleration.accel1_x);
-            accel1Y_sum += raw_data->data.acceleration.accel1_y;
-            accel1Y_sum2 += (raw_data->data.acceleration.accel1_y) * (raw_data->data.acceleration.accel1_y);
-            accel1Z_sum += raw_data->data.acceleration.accel1_z;
-            accel1Z_sum2 += (raw_data->data.acceleration.accel1_z) * (raw_data->data.acceleration.accel1_z);
+            case STRAIN_DATA:
+                strain_num ++;
+                strain_sum += raw_data->data.strain.strain;
+                strain_sum2 += (long)(raw_data->data.strain.strain) * (long)(raw_data->data.strain.strain);
+                {
+                    double mean = (double) strain_sum / (double) strain_num;
+                    double sd = pow((double) strain_sum2 / (double) strain_num - mean*mean, 0.5);
+                    strain->SetValue(wxString().Format("%d", raw_data->data.strain.strain));
+                    strain_avg->SetValue(wxString().Format("%0.3lf", mean));
+                    strain_sd->SetValue(wxString().Format("%0.3lf", sd));
+                }
+                length -= 4;
+                byte_pointer_to_raw_data += 4;
+                raw_data = (struct raw_data *) byte_pointer_to_raw_data;
+                break;
+            case ACCELERATION_DATA:
+                accel1_num ++;
+                accel1X_sum += raw_data->data.acceleration.accel1_x;
+                accel1X_sum2 += (raw_data->data.acceleration.accel1_x) * (raw_data->data.acceleration.accel1_x);
+                accel1Y_sum += raw_data->data.acceleration.accel1_y;
+                accel1Y_sum2 += (raw_data->data.acceleration.accel1_y) * (raw_data->data.acceleration.accel1_y);
+                accel1Z_sum += raw_data->data.acceleration.accel1_z;
+                accel1Z_sum2 += (raw_data->data.acceleration.accel1_z) * (raw_data->data.acceleration.accel1_z);
 
-            accel2_num ++;
-            accel2X_sum += raw_data->data.acceleration.accel2_x;
-            accel2X_sum2 += (raw_data->data.acceleration.accel2_x) * (raw_data->data.acceleration.accel2_x);
-            accel2Y_sum += raw_data->data.acceleration.accel2_y;
-            accel2Y_sum2 += (raw_data->data.acceleration.accel2_y) * (raw_data->data.acceleration.accel2_y);
-            accel2Z_sum += raw_data->data.acceleration.accel2_z;
-            accel2Z_sum2 += (raw_data->data.acceleration.accel2_z) * (raw_data->data.acceleration.accel2_z);
+                accel2_num ++;
+                accel2X_sum += raw_data->data.acceleration.accel2_x;
+                accel2X_sum2 += (raw_data->data.acceleration.accel2_x) * (raw_data->data.acceleration.accel2_x);
+                accel2Y_sum += raw_data->data.acceleration.accel2_y;
+                accel2Y_sum2 += (raw_data->data.acceleration.accel2_y) * (raw_data->data.acceleration.accel2_y);
+                accel2Z_sum += raw_data->data.acceleration.accel2_z;
+                accel2Z_sum2 += (raw_data->data.acceleration.accel2_z) * (raw_data->data.acceleration.accel2_z);
 
-            {
-                double mean = accel1X_sum / accel1_num;
-                double sd = pow(accel1X_sum2 / accel1_num - (accel1X_sum / accel1_num) * (accel1X_sum / accel1_num), 0.5);
-                // Convert to g. ±8g full scale, 14 bit resolution
-                accel1[0]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel1_x) * 8.0 / 32768.0));
-                accel1_avg[0]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
-                accel1_sd[0]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
-            }
+                {
+                    double mean = accel1X_sum / accel1_num;
+                    double sd = pow(accel1X_sum2 / accel1_num - (accel1X_sum / accel1_num) * (accel1X_sum / accel1_num), 0.5);
+                    // Convert to g. ±8g full scale, 14 bit resolution
+                    accel1[0]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel1_x) * 8.0 / 32768.0));
+                    accel1_avg[0]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
+                    accel1_sd[0]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
+                }
 
-            {
-                double mean = accel1Y_sum / accel1_num;
-                double sd = pow(accel1Y_sum2 / accel1_num - (accel1Y_sum / accel1_num) * (accel1Y_sum / accel1_num), 0.5);
-                // Convert to g. ±8g full scale, 14 bit resolution
-                accel1[1]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel1_y) * 8.0 / 32768.0));
-                accel1_avg[1]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
-                accel1_sd[1]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
-            }
+                {
+                    double mean = accel1Y_sum / accel1_num;
+                    double sd = pow(accel1Y_sum2 / accel1_num - (accel1Y_sum / accel1_num) * (accel1Y_sum / accel1_num), 0.5);
+                    // Convert to g. ±8g full scale, 14 bit resolution
+                    accel1[1]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel1_y) * 8.0 / 32768.0));
+                    accel1_avg[1]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
+                    accel1_sd[1]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
+                }
 
-            {
-                double mean = accel1Z_sum / accel1_num;
-                double sd = pow(accel1Z_sum2 / accel1_num - (accel1Z_sum / accel1_num) * (accel1Z_sum / accel1_num), 0.5);
-                // Convert to g. ±8g full scale, 14 bit resolution
-                accel1[2]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel1_z) * 8.0 / 32768.0));
-                accel1_avg[2]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
-                accel1_sd[2]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
-            }
+                {
+                    double mean = accel1Z_sum / accel1_num;
+                    double sd = pow(accel1Z_sum2 / accel1_num - (accel1Z_sum / accel1_num) * (accel1Z_sum / accel1_num), 0.5);
+                    // Convert to g. ±8g full scale, 14 bit resolution
+                    accel1[2]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel1_z) * 8.0 / 32768.0));
+                    accel1_avg[2]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
+                    accel1_sd[2]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
+                }
 
-            {
-                double mean = accel2X_sum / accel2_num;
-                double sd = pow(accel2X_sum2 / accel2_num - (accel2X_sum / accel2_num) * (accel2X_sum / accel2_num), 0.5);
-                // Convert to g. ±8g full scale, 14 bit resolution
-                accel2[0]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel2_x) * 8.0 / 32768.0));
-                accel2_avg[0]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
-                accel2_sd[0]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
-            }
+                {
+                    double mean = accel2X_sum / accel2_num;
+                    double sd = pow(accel2X_sum2 / accel2_num - (accel2X_sum / accel2_num) * (accel2X_sum / accel2_num), 0.5);
+                    // Convert to g. ±8g full scale, 14 bit resolution
+                    accel2[0]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel2_x) * 8.0 / 32768.0));
+                    accel2_avg[0]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
+                    accel2_sd[0]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
+                }
 
-            {
-                double mean = accel2Y_sum / accel2_num;
-                double sd = pow(accel2Y_sum2 / accel2_num - (accel2Y_sum / accel2_num) * (accel2Y_sum / accel2_num), 0.5);
-                // Convert to g. ±8g full scale, 14 bit resolution
-                accel2[1]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel2_y) * 8.0 / 32768.0));
-                accel2_avg[1]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
-                accel2_sd[1]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
-            }
+                {
+                    double mean = accel2Y_sum / accel2_num;
+                    double sd = pow(accel2Y_sum2 / accel2_num - (accel2Y_sum / accel2_num) * (accel2Y_sum / accel2_num), 0.5);
+                    // Convert to g. ±8g full scale, 14 bit resolution
+                    accel2[1]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel2_y) * 8.0 / 32768.0));
+                    accel2_avg[1]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
+                    accel2_sd[1]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
+                }
 
-            {
-                double mean = accel2Z_sum / accel2_num;
-                double sd = pow(accel2Z_sum2 / accel2_num - (accel2Z_sum / accel2_num) * (accel2Z_sum / accel2_num), 0.5);
-                // Convert to g. ±8g full scale, 14 bit resolution
-                accel2[2]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel2_z) * 8.0 / 32768.0));
-                accel2_avg[2]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
-                accel2_sd[2]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
-            }
-            length -= 13;
-            byte_pointer_to_raw_data += 13;
-            raw_data = (struct raw_data *) byte_pointer_to_raw_data;
-            break;
-        case TEMPERATURE_DATA:
-            temp = raw_data->data.temperature.integral + 1.0e-6 * (raw_data->data.temperature.fractional);
-            {
-                temperature->SetValue(wxString().Format("%0.2lf", temp));
-            }
-            length -= 7;
-            byte_pointer_to_raw_data += 7;
-            raw_data = (struct raw_data *) byte_pointer_to_raw_data;
-            break;
-        case BATTERY_DATA:
-            volts = 0.6f*6.0f*raw_data->data.voltage*0x01p-12;
-            {
-                batteryVoltage->SetValue(wxString().Format("%0.2lf", volts));
-            }
-            length -= 3;
-            byte_pointer_to_raw_data += 3;
-            raw_data = (struct raw_data *) byte_pointer_to_raw_data;
-            break;
-        case STATE_DATA:
-            x->SetValue(wxString().Format(L"%+10.1f°", raw_data->data.state.position * 360.0 * 0x01p-13));
-            x_dot->SetValue(wxString().Format(L"%+10.1f°/sec", raw_data->data.state.velocity * 360.0 * 128.0 * 0x01p-35));
-            x_ddot->SetValue(wxString().Format(L"%+10.1f°/sec²", raw_data->data.state.acceleration * 360.0 * 16384.0 * 0x01p-40));
-            crank_graphics->angle = raw_data->data.state.position * 360.0 / 8192.0;
-            crank_graphics->newAngle = true;
-            length -= 13;
-            byte_pointer_to_raw_data += 13;
-            raw_data = (struct raw_data *) byte_pointer_to_raw_data;
-            break;
-        case VECTOR4:
-            printf("Vector: %0.4g, %0.4g, %0.4g, %0.4g\n",
-                   raw_data->data.vector4[0],
-                   raw_data->data.vector4[1],
-                   raw_data->data.vector4[2],
-                   raw_data->data.vector4[3]);
-            length -= 17;
-            byte_pointer_to_raw_data += 17;
-            raw_data = (struct raw_data *) byte_pointer_to_raw_data;
-            break;
-        case MATRIX33:
-            printf("Matrix: %0.4g, %0.4g, %0.4g\n"
-                   "        %0.4g, %0.4g, %0.4g\n"
-                   "        %0.4g, %0.4g, %0.4g\n",
-                   raw_data->data.matrix33[0][0], raw_data->data.matrix33[0][1], raw_data->data.matrix33[0][2],
-                   raw_data->data.matrix33[1][0], raw_data->data.matrix33[1][1], raw_data->data.matrix33[1][2],
-                   raw_data->data.matrix33[1][0], raw_data->data.matrix33[2][1], raw_data->data.matrix33[2][2]);
-            length -= 37;
-            byte_pointer_to_raw_data += 37;
-            raw_data = (struct raw_data *) byte_pointer_to_raw_data;
-            break;
-        default :
-            printf("WARNING: Undefined Op Code %d\n", raw_data->op_code);
-            length = 0;
-            break;
+                {
+                    double mean = accel2Z_sum / accel2_num;
+                    double sd = pow(accel2Z_sum2 / accel2_num - (accel2Z_sum / accel2_num) * (accel2Z_sum / accel2_num), 0.5);
+                    // Convert to g. ±8g full scale, 14 bit resolution
+                    accel2[2]->SetValue(wxString().Format("%0.3f", (raw_data->data.acceleration.accel2_z) * 8.0 / 32768.0));
+                    accel2_avg[2]->SetValue(wxString().Format("%0.3f", mean * 8.0 / 32768.0));
+                    accel2_sd[2]->SetValue(wxString().Format("%0.3f", sd * 8.0 / 32768.0));
+                }
+                length -= 13;
+                byte_pointer_to_raw_data += 13;
+                raw_data = (struct raw_data *) byte_pointer_to_raw_data;
+                break;
+                case TEMPERATURE_DATA:
+                    temp = raw_data->data.temperature.integral + 1.0e-6 * (raw_data->data.temperature.fractional);
+                    {
+                        temperature->SetValue(wxString().Format("%0.2lf", temp));
+                    }
+                    length -= 7;
+                    byte_pointer_to_raw_data += 7;
+                    raw_data = (struct raw_data *) byte_pointer_to_raw_data;
+                    break;
+                case BATTERY_DATA:
+                    volts = 0.6f*6.0f*raw_data->data.voltage*0x01p-12;
+                    {
+                        batteryVoltage->SetValue(wxString().Format("%0.2lf", volts));
+                    }
+                    length -= 3;
+                    byte_pointer_to_raw_data += 3;
+                    raw_data = (struct raw_data *) byte_pointer_to_raw_data;
+                    break;
+                case STATE_DATA:
+                    x->SetValue(wxString().Format(L"%+10.1f°", raw_data->data.state.position * 360.0 * 0x01p-13));
+                    x_dot->SetValue(wxString().Format(L"%+10.1f°/sec", raw_data->data.state.velocity * 360.0 * 128.0 * 0x01p-35));
+                    x_ddot->SetValue(wxString().Format(L"%+10.1f°/sec²", raw_data->data.state.acceleration * 360.0 * 16384.0 * 0x01p-40));
+                    crank_graphics->angle = raw_data->data.state.position * 360.0 / 8192.0;
+                    crank_graphics->newAngle = true;
+                    length -= 13;
+                    byte_pointer_to_raw_data += 13;
+                    raw_data = (struct raw_data *) byte_pointer_to_raw_data;
+                    break;
+                case VECTOR4:
+                    printf("Vector: %0.4g, %0.4g, %0.4g, %0.4g\n",
+                           raw_data->data.vector4[0],
+                           raw_data->data.vector4[1],
+                           raw_data->data.vector4[2],
+                           raw_data->data.vector4[3]);
+                    length -= 17;
+                    byte_pointer_to_raw_data += 17;
+                    raw_data = (struct raw_data *) byte_pointer_to_raw_data;
+                    break;
+                case MATRIX33:
+                    printf("Matrix: %0.4g, %0.4g, %0.4g\n"
+                    "        %0.4g, %0.4g, %0.4g\n"
+                    "        %0.4g, %0.4g, %0.4g\n",
+                    raw_data->data.matrix33[0][0], raw_data->data.matrix33[0][1], raw_data->data.matrix33[0][2],
+                    raw_data->data.matrix33[1][0], raw_data->data.matrix33[1][1], raw_data->data.matrix33[1][2],
+                    raw_data->data.matrix33[1][0], raw_data->data.matrix33[2][1], raw_data->data.matrix33[2][2]);
+                    length -= 37;
+                    byte_pointer_to_raw_data += 37;
+                    raw_data = (struct raw_data *) byte_pointer_to_raw_data;
+                    break;
+                default :
+                    printf("WARNING: Undefined Op Code %d\n", raw_data->op_code);
+                    length = 0;
+                    break;
         }
     }
 
-//    crank_graphics->Refresh();
-//    crank_graphics->Update();
+    //    crank_graphics->Refresh();
+    //    crank_graphics->Update();
 
 }
 //void IC2Frame::NotifyInfoCrankRaw(wxCommandEvent &evt)
@@ -3400,7 +3202,7 @@ BLEDevice::BLEDevice(IC2Frame *context, wxWindow *parent, const wxString &name, 
     wxToggleButton *button = new wxToggleButton(parent, wxID_ANY, "Connect");
     Add(addr, 1, wxALL, 10);
     Add(button, 1, wxALL | wxEXPAND, 10);
-//    userData = new UserData(address);
+    //    userData = new UserData(address);
     button->Bind(wxEVT_TOGGLEBUTTON, &IC2Frame::OnConnect, context, wxID_ANY, wxID_ANY,  new UserData(address));
 }
 

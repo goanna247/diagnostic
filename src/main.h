@@ -8,8 +8,10 @@
 #include <wx/notebook.h>
 #include <wx/file.h>
 #include <wx/clntdata.h>
+#include <wx/sizer.h>
 
 #include "crank-canvas.h"
+#include "gui-helper.h"
 
 //--------------------------------------------------------------------------------------------------
 // Forward declarations
@@ -31,6 +33,31 @@ public:
 //--------------------------------------------------------------------------------------------------
 class IC2Frame : public wxFrame
 {
+public:
+
+    wxNotebook* notebook;
+
+    wxPanel* devices;
+    wxPanel* devInfo;
+    wxPanel* battery;
+    wxPanel* features;
+    wxPanel* measurement;
+    wxPanel* sensor_location;
+    wxPanel* control;
+    wxPanel* vector;
+    wxPanel* infoCrank_control;
+    wxPanel* infoCrank_raw;
+    wxPanel* page12;
+    CrankCanvas* crank_graphics;
+    wxButton* refreshDeviceInformation;
+
+    wxButton* refreshBatteryInformation;
+    wxCheckBox* loggingBattery;
+    wxButton* logFileBattery;
+
+    wxButton* refreshFeatures;
+
+
     int sockfd;
 
     struct sensorLocations_s {
@@ -52,40 +79,40 @@ class IC2Frame : public wxFrame
         }
     };
 
-//    class LogFile : public wxObject
-//    {
-//    public:
-//        wxFile *m_file;
-//        LogFile(wxFile *file)
-//        {
-//            m_file = file;
-//        }
-//    };
+    //    class LogFile : public wxObject
+    //    {
+    //    public:
+    //        wxFile *m_file;
+    //        LogFile(wxFile *file)
+    //        {
+    //            m_file = file;
+    //        }
+    //    };
 
-//    class wxStringObject : public wxObject
-//    {
-//    public:
-//        wxString *m_string;
-//        wxStringObject(const char *str)
-//        {
-//            m_string = new wxString(str);
-//        }
-//    };
+    //    class wxStringObject : public wxObject
+    //    {
+    //    public:
+    //        wxString *m_string;
+    //        wxStringObject(const char *str)
+    //        {
+    //            m_string = new wxString(str);
+    //        }
+    //    };
 
-//    class wxTextCtrlObject : public wxObject
-//    {
-//    public:
-//        wxTextCtrl *m_textCtrl;
-//        wxTextCtrlObject(wxTextCtrl *textCtrl)
-//        {
-//            m_textCtrl = textCtrl;
-//        }
-//    };
+    //    class wxTextCtrlObject : public wxObject
+    //    {
+    //    public:
+    //        wxTextCtrl *m_textCtrl;
+    //        wxTextCtrlObject(wxTextCtrl *textCtrl)
+    //        {
+    //            m_textCtrl = textCtrl;
+    //        }
+    //    };
 
-//    wxNotebook *notebook;
+    //    wxNotebook *notebook;
 
     // Devices page
-    wxPanel *devices;
+
     wxWrapSizer *devicesSizer;
 
     // Device infomation page
@@ -129,7 +156,7 @@ class IC2Frame : public wxFrame
     wxStaticText *distributedFeature;
 
     // Cycling power measurement page
-    wxPanel    *measurement;
+
     wxCheckBox *pedalPowerBalancePresent;
     wxCheckBox *accumulatedTorquePresent;
     wxCheckBox *wheelRevolutionDataPresent;
@@ -187,7 +214,7 @@ class IC2Frame : public wxFrame
     wxStaticText *enhancedOffsetCompensationValue;
 
     // Cycling power vector page
-    wxPanel *vector;
+
     wxCheckBox *crankRevolutionDataVectorPresent;
     wxCheckBox *firstCrankMeasurementAnglePresent;
     wxCheckBox *instantaneousForceMagnitudeArrayPresent;
@@ -283,9 +310,9 @@ class IC2Frame : public wxFrame
     };
 
     // InfoCrank graphics page
-    CrankCanvas *crank_graphics;
-//    CrankTimer *crank_timer;
-public:
+
+    //    CrankTimer *crank_timer;
+
 
     IC2Frame();
     void ConnectSocket();
@@ -345,6 +372,15 @@ public:
     void SetInfoCrankRawData(void *str, int length);
 
     // InfoCrank graphics page
+    void OnCountdownTimer(wxTimerEvent& event);
+    wxDECLARE_EVENT_TABLE();
+
+
+
+private:
+    wxStaticText* disconnectCountdownLabel;
+    wxTimer* countdownTimer;
+    int countdownSeconds;
 
 };
 
