@@ -111,8 +111,6 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     CreateMenuBar(this); //helper function found in gui-helper
     CreateNotebookPages(this);
 
-
-
     wxSizerFlags fieldFlags, groupBoxFlags, groupBoxInnerFlags, rightFlags, bottomRightFlags, centreFlags, gridFlags;
     InitializeSizerFlags(fieldFlags, groupBoxFlags, groupBoxInnerFlags, rightFlags, bottomRightFlags, centreFlags, gridFlags);
 
@@ -127,7 +125,7 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
 
     SetupFeaturesPage(this, fieldFlags, bottomRightFlags);
 
-    /*// Bind the controls
+    // Bind the controls
     refreshFeatures->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
         SendCommand("Refresh features\n");
     });
@@ -181,7 +179,7 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
         sizer->AddStretchSpacer();
         sizer->Add(refreshFeatures, bottomRightFlags);
         features->SetSizerAndFit(sizer);
-    }*/
+    }
 
     // Cycling power measurement
     pedalPowerBalancePresent = new wxCheckBox(measurement, wxID_ANY, "Balance: Unknown");
@@ -1598,12 +1596,40 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     Fit();
     Show();
 
+
+    //------------------ANNA----------------------
     wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
     disconnectCountdownLabel = new wxStaticText(page12, wxID_ANY, "Disconnect in: 60s");
     mainSizer->Add(disconnectCountdownLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
     countdownTimer = new wxTimer(this ,wxID_ANY);
     countdownSeconds = 60;
     countdownTimer->Start(1000);
+
+
+    // In your IC2Frame constructor, after creating the main panel/layout
+    // wxPanel* overlayPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(200, 30));
+    // overlayPanel->SetBackgroundColour(wxColour(0, 0, 0, 128)); // Semi-transparent black
+    // overlayPanel->SetPosition(wxPoint(10, 10)); // Top-left corner
+    //
+    // wxStaticText* overlayText = new wxStaticText(overlayPanel, wxID_ANY, "Overlay Message", wxPoint(5, 5));
+    // overlayText->SetForegroundColour(*wxWHITE);
+
+//     overlayPanel = new DraggableOverlayPanel(this, wxID_ANY, wxPoint(10, 10), wxSize(200, 30));
+//     overlayText = new wxStaticText(overlayPanel, wxID_ANY, "Overlay Message", wxPoint(5, 5));
+//     overlayText->SetForegroundColour(*wxWHITE);
+//
+    auto* overlay = new DraggableOverlayPanel(devices, wxID_ANY, wxPoint(10, 10), wxSize(200, 30));
+    auto* overlayText = new wxStaticText(overlay, wxID_ANY, "Overlay Message", wxPoint(5, 5));
+    overlayText->SetForegroundColour(*wxWHITE);
+}
+
+
+
+//TODO - title block if this works
+void IC2Frame::SetOverlayText(const wxString& text) {
+    if (overlayText) {
+        overlayText->SetLabel(text);
+    }
 }
 
 // -------------------------------------------------------------------------------------------------

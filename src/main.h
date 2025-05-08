@@ -28,13 +28,76 @@ public:
     bool OnInit();
 };
 
+
+class DraggableOverlayPanel : public wxPanel {
+public:
+    DraggableOverlayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size)
+    : wxPanel(parent, id, pos, size), dragging(false), dragTimer(this)
+    {
+        SetBackgroundColour(wxColour(0, 0, 0, 128));
+
+        Bind(wxEVT_LEFT_DOWN, &DraggableOverlayPanel::OnMouseDown, this);
+        Bind(wxEVT_LEFT_UP, &DraggableOverlayPanel::OnMouseUp, this);
+        Bind(wxEVT_TIMER, &DraggableOverlayPanel::OnDragTimer, this, dragTimer.GetId());
+        Bind(wxEVT_MOUSE_CAPTURE_LOST, &DraggableOverlayPanel::OnCaptureLost, this);
+    }
+
+private:
+    bool dragging = false;
+    wxPoint mouseOffsetInOverlay;
+    wxTimer dragTimer;
+
+    void OnMouseDown(wxMouseEvent& event) {
+        dragging = true;
+        mouseOffsetInOverlay = event.GetPosition();
+        CaptureMouse();
+        dragTimer.Start(10);  // Poll every 10ms
+    }
+
+    void OnMouseUp(wxMouseEvent&) {
+        CancelDrag();
+    }
+
+    void OnCaptureLost(wxMouseCaptureLostEvent&) {
+        CancelDrag();
+    }
+
+    void OnDragTimer(wxTimerEvent&) {
+        if (!dragging) return;
+
+        wxPoint mouseScreenPos = wxGetMousePosition();
+        wxPoint parentMousePos = GetParent()->ScreenToClient(mouseScreenPos);
+        wxPoint newOverlayPos = parentMousePos - mouseOffsetInOverlay;
+
+        // Clamp to parent bounds
+        wxSize parentSize = GetParent()->GetClientSize();
+        wxSize overlaySize = GetSize();
+
+        newOverlayPos.x = std::clamp(newOverlayPos.x, 0, parentSize.GetWidth() - overlaySize.GetWidth());
+        newOverlayPos.y = std::clamp(newOverlayPos.y, 0, parentSize.GetHeight() - overlaySize.GetHeight());
+
+        Move(newOverlayPos);
+    }
+
+    void CancelDrag() {
+        dragging = false;
+        if (HasCapture()) ReleaseMouse();
+        if (dragTimer.IsRunning()) dragTimer.Stop();
+    }
+};
+
+
+
+
+
+
 //--------------------------------------------------------------------------------------------------
 // The main frame
 //--------------------------------------------------------------------------------------------------
 class IC2Frame : public wxFrame
 {
 public:
-
+    wxStaticText* overlayText;
     wxNotebook* notebook;
 
     wxPanel* devices;
@@ -381,6 +444,15 @@ private:
     wxStaticText* disconnectCountdownLabel;
     wxTimer* countdownTimer;
     int countdownSeconds;
+
+    wxPanel* overlayPanel;
+    bool isDraggingOverlay = false;
+    wxPoint dragStartPos;
+
+    void SetOverlayText(const wxString& text);
+    // void OnOverlayMouseDown(wxMouseEvent& event);
+    // void OnOverlayMouseMove(wxMouseEvent& event);
+    // void OnOverlayMouseUp(wxMouseEvent& event);
 
 };
 
