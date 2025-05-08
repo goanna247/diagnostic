@@ -28,7 +28,7 @@ public:
     bool OnInit();
 };
 
-
+//TODO - add title block and clean
 class DraggableOverlayPanel : public wxPanel {
 public:
     DraggableOverlayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size)
@@ -97,8 +97,30 @@ private:
 class IC2Frame : public wxFrame
 {
 public:
-    wxStaticText* overlayText;
+    //wxStaticText* overlayText;
     wxNotebook* notebook;
+
+    wxTextCtrl *cumulative;
+    wxButton *supportedLocations;
+    wxButton *requestCrankLength;
+    wxButton *requestChainWeight;
+    wxButton *requestSpan;
+    wxButton *requestChainLength;
+    wxButton *offsetCompensation;
+    wxButton *maskMeasurement;
+    wxButton *requestSamplingRate;
+    wxButton *requestCalibrationDate;
+    wxButton *enhancedOffsetCompensation;
+
+    int countdownSeconds;
+    wxToggleButton *notifyMeasurement;
+    wxPanel *wheelSpeedPanel;
+    wxPanel *cadencePanel;
+    wxPanel *torquePanel;
+    wxToggleButton *broadcastMeasurement;
+    wxCheckBox *loggingMeasurement;
+    wxButton *logFileMeasurement;
+
 
     wxPanel* devices;
     wxPanel* devInfo;
@@ -120,6 +142,7 @@ public:
 
     wxButton* refreshFeatures;
 
+    void SetOverlayText(const wxString& text);
 
     int sockfd;
 
@@ -443,13 +466,14 @@ public:
 private:
     wxStaticText* disconnectCountdownLabel;
     wxTimer* countdownTimer;
-    int countdownSeconds;
+    wxStaticText* overlayText = nullptr;
 
     wxPanel* overlayPanel;
     bool isDraggingOverlay = false;
     wxPoint dragStartPos;
 
-    void SetOverlayText(const wxString& text);
+
+
     // void OnOverlayMouseDown(wxMouseEvent& event);
     // void OnOverlayMouseMove(wxMouseEvent& event);
     // void OnOverlayMouseUp(wxMouseEvent& event);

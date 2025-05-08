@@ -75,6 +75,9 @@ bool IC2App::OnInit()
 }
 
 
+// -------------------------------------------------------------------------------------------------
+// Runs the time based disconnect timer, needs to only start after registerestering a certain amount of time of no movement
+// -------------------------------------------------------------------------------------------------
 void IC2Frame::OnCountdownTimer(wxTimerEvent &event)
 {
     if (countdownSeconds > 0) {
@@ -83,13 +86,13 @@ void IC2Frame::OnCountdownTimer(wxTimerEvent &event)
         wxString labelText;
         labelText.Printf("Disconnect in: %ds", countdownSeconds);
         disconnectCountdownLabel->SetLabel(labelText);
+        SetOverlayText(labelText); // <-- update overlay too
     } else {
         countdownTimer->Stop();
         disconnectCountdownLabel->SetLabel("Disconnected!");
+        SetOverlayText("Disconnected!");
 
-
-        //trigger disconnect function here
-
+        // trigger disconnect function here
     }
 }
 
@@ -114,377 +117,23 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     wxSizerFlags fieldFlags, groupBoxFlags, groupBoxInnerFlags, rightFlags, bottomRightFlags, centreFlags, gridFlags;
     InitializeSizerFlags(fieldFlags, groupBoxFlags, groupBoxInnerFlags, rightFlags, bottomRightFlags, centreFlags, gridFlags);
 
-
     SetupDevicePanels(this);
     SetupDeviceInfoPage(this, fieldFlags, bottomRightFlags);
     SetupBatteryPage(this, fieldFlags, groupBoxFlags,
 
     groupBoxInnerFlags, rightFlags);
-
-    //SetupFeaturesPage(this);
-
     SetupFeaturesPage(this, fieldFlags, bottomRightFlags);
 
-    // Bind the controls
-    refreshFeatures->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
-        SendCommand("Refresh features\n");
-    });
+    setupFunction(this, fieldFlags, bottomRightFlags); //pretty sure this is setting up the features tab
 
-    {
-        wxFlexGridSizer *sizer = new wxFlexGridSizer(2, 0, 0);
-        sizer->AddGrowableCol(1);
-        sizer->AddGrowableRow(20);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Pedal power balance supported"), fieldFlags);
-        sizer->Add(balanceFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Accumulated torque supported"), fieldFlags);
-        sizer->Add(torqueFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Wheel revolution data supported"), fieldFlags);
-        sizer->Add(wheelRevolutionFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Crank revolution data supported"), fieldFlags);
-        sizer->Add(crankRevolutionFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Extreme magnitudes supported"), fieldFlags);
-        sizer->Add(magnitudesFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Extreme angles supported"), fieldFlags);
-        sizer->Add(anglesFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Top and bottom dead spot angles supported"), fieldFlags);
-        sizer->Add(deadSpotsFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Accumulated energy supported"), fieldFlags);
-        sizer->Add(energyFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Offset compensation indicator supported"), fieldFlags);
-        sizer->Add(compensationIndicatorFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Offset compensation supported"), fieldFlags);
-        sizer->Add(compensationFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Cycling power measurement characteristic content masking supported"), fieldFlags);
-        sizer->Add(maskingFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Multiple sensor locations supported"), fieldFlags);
-        sizer->Add(locationsFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Crank length adjustment supported"), fieldFlags);
-        sizer->Add(crankLengthFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Chain length adjustment supported"), fieldFlags);
-        sizer->Add(chainLengthFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Chain weight adjustment supported"), fieldFlags);
-        sizer->Add(chainWeightFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Span length adjustment supported"), fieldFlags);
-        sizer->Add(spanFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Sensor measurement context"), fieldFlags);
-        sizer->Add(contextFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Instantaneous measurement direction supported"), fieldFlags);
-        sizer->Add(directionFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Factory calibration date supported"), fieldFlags);
-        sizer->Add(dateFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Enhanced offset compensation procedure supported"), fieldFlags);
-        sizer->Add(enhancedCompensationFeature, fieldFlags);
-        sizer->Add(new wxStaticText(features, wxID_ANY, "Distributed system support"), fieldFlags);
-        sizer->Add(distributedFeature, fieldFlags);
-        sizer->AddStretchSpacer();
-        sizer->Add(refreshFeatures, bottomRightFlags);
-        features->SetSizerAndFit(sizer);
-    }
+    SetupMeasurementPage(this);
 
-    // Cycling power measurement
-    pedalPowerBalancePresent = new wxCheckBox(measurement, wxID_ANY, "Balance: Unknown");
-    //    pedalPowerBalancePresent->Enable(false);
-    accumulatedTorquePresent = new wxCheckBox(measurement, wxID_ANY, "Accumulated torque: Wheel based");
-    //    accumulatedTorquePresent->Enable(false);
-    wheelRevolutionDataPresent = new wxCheckBox(measurement, wxID_ANY, "Wheel revolution data");
-    //    wheelRevolutionDataPresent->Enable(false);
-    crankRevolutionDataPresent = new wxCheckBox(measurement, wxID_ANY, "Crank revolution data");
-    //    crankRevolutionDataPresent->Enable(false);
-    extremeForceMagnitudesPresent = new wxCheckBox(measurement, wxID_ANY, "Extreme force magnitudes");
-    //    extremeForceMagnitudesPresent->Enable(false);
-    extremeTorqueMagnitudesPresent = new wxCheckBox(measurement, wxID_ANY, "Extreme torque magnitudes");
-    //    extremeTorqueMagnitudesPresent->Enable(false);
-    extremeAnglesPresent = new wxCheckBox(measurement, wxID_ANY, "Extreme angles");
-    //    extremeAnglesPresent->Enable(false);
-    topDeadSpotAnglePresent = new wxCheckBox(measurement, wxID_ANY, "Top dead spot angle");
-    //    topDeadSpotAnglePresent->Enable(false);
-    bottomDeadSpotAnglePresent = new wxCheckBox(measurement, wxID_ANY, "Bottom dead spot angle");
-    //    bottomDeadSpotAnglePresent->Enable(false);
-    accumulatedEnergyPresent = new wxCheckBox(measurement, wxID_ANY, "Accumulated energy");
-    //    accumulatedEnergyPresent->Enable(false);
-    offsetCompensationIndicator = new wxCheckBox(measurement, wxID_ANY, "Offset compensation indicator");
-    //    offsetCompensationIndicator->Enable(false);
-    instantaneousPower = new wxStaticText(measurement, wxID_ANY, "-");
-    pedalPowerBalance = new wxStaticText(measurement, wxID_ANY, "-");
-    accumulatedTorque = new wxStaticText(measurement, wxID_ANY, "-");
-    wxPanel *torquePanel = new wxPanel(measurement);
-    torquePanel->SetBackgroundColour(wxColour(wxT("YELLOW")));
-    torque = new wxStaticText(torquePanel, wxID_ANY, "-");
-    torque->SetForegroundColour(wxColour(wxT("RED")));
-    cumulativeWheelRevolutions = new wxStaticText(measurement, wxID_ANY, "-");
-    lastWheelEventTime = new wxStaticText(measurement, wxID_ANY, "-");
-    wxPanel *wheelSpeedPanel = new wxPanel(measurement);
-    wheelSpeedPanel->SetBackgroundColour(wxColour(wxT("YELLOW")));
-    wheelSpeed = new wxStaticText(wheelSpeedPanel, wxID_ANY, "-");
-    wheelSpeed->SetForegroundColour(wxColour(wxT("RED")));
-    cumulativeCrankRevolutions = new wxStaticText(measurement, wxID_ANY, "-");
-    lastCrankEventTime = new wxStaticText(measurement, wxID_ANY, "-");
-    wxPanel *cadencePanel = new wxPanel(measurement);
-    cadencePanel->SetBackgroundColour(wxColour(wxT("YELLOW")));
-    cadence = new wxStaticText(cadencePanel, wxID_ANY, "-");
-    cadence->SetForegroundColour(wxColour(wxT("RED")));
-    maximumForceMagnitude = new wxStaticText(measurement, wxID_ANY, "-");
-    minimumForceMagnitude = new wxStaticText(measurement, wxID_ANY, "-");
-    maximumTorqueMagnitude = new wxStaticText(measurement, wxID_ANY, "-");
-    minimumTorqueMagnitude = new wxStaticText(measurement, wxID_ANY, "-");
-    maximumAngle = new wxStaticText(measurement, wxID_ANY, "-");
-    minimumAngle = new wxStaticText(measurement, wxID_ANY, "-");
-    topDeadSpotAngle = new wxStaticText(measurement, wxID_ANY, "-");
-    bottomDeadSpotAngle = new wxStaticText(measurement, wxID_ANY, "-");
-    accumulatedEnergy = new wxStaticText(measurement, wxID_ANY, "-");
-    wxToggleButton *notifyMeasurement = new wxToggleButton(measurement, wxID_ANY, "Notify");
-    wxToggleButton *broadcastMeasurement = new wxToggleButton(measurement, wxID_ANY, "Broadcast");
-    wxCheckBox *loggingMeasurement = new wxCheckBox(measurement, wxID_ANY, "/dev/null");
-    wxButton *logFileMeasurement = new wxButton(measurement, wxID_ANY, "...", wxDefaultPosition, wxSize(50, 20));
+    bindControls(this);
 
-    // Bind the controls
-    notifyMeasurement->Bind(wxEVT_TOGGLEBUTTON, [&](wxCommandEvent & evt) {
-        switch (evt.GetInt()) {
-            case TRUE:
-                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
-                SendCommand("Notify measurement on\n");
-                break;
-            case FALSE:
-                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Notify");
-                SendCommand("Notify measurement off\n");
-                break;
-        }
-    });
-    broadcastMeasurement->Bind(wxEVT_TOGGLEBUTTON, [&](wxCommandEvent & evt) {
-        switch (evt.GetInt()) {
-            case TRUE:
-                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
-                SendCommand("Broadcast measurement on\n");
-                break;
-            case FALSE:
-                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Broadcast");
-                SendCommand("Broadcast measurement off\n");
-                break;
-        }
-    });
-    logFileMeasurement->Bind(wxEVT_BUTTON, &IC2Frame::LogFileName, this, wxID_ANY, wxID_ANY, new FileDialogParameters("measurement.log", loggingMeasurement));
-    loggingMeasurement->Bind(wxEVT_CHECKBOX,
-                             [&](wxCommandEvent & evt) {
-                                 wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
-                                 if (checkBox->IsChecked()) {
-                                     //            logMeasurement.Create(checkBox->GetLabel(), true);
-                                     logMeasurement.Open(checkBox->GetLabel(), wxFile::write);
-                                 } else {
-                                     logMeasurement.Close();
-                                 }
-                             });
+    layoutPage(this, fieldFlags, groupBoxFlags, groupBoxInnerFlags, gridFlags, rightFlags);
 
-    // Layout the page
-    {
-        wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-
-        {
-            wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Flags");
-            {
-                wxWrapSizer *wrapSizer = new wxWrapSizer(wxVERTICAL);
-                wrapSizer->Add(pedalPowerBalancePresent, fieldFlags);
-                wrapSizer->Add(accumulatedTorquePresent, fieldFlags);
-                wrapSizer->Add(wheelRevolutionDataPresent, fieldFlags);
-                wrapSizer->Add(crankRevolutionDataPresent, fieldFlags);
-                wrapSizer->Add(extremeForceMagnitudesPresent, fieldFlags);
-                wrapSizer->Add(extremeTorqueMagnitudesPresent, fieldFlags);
-                wrapSizer->Add(extremeAnglesPresent, fieldFlags);
-                wrapSizer->Add(topDeadSpotAnglePresent, fieldFlags);
-                wrapSizer->Add(bottomDeadSpotAnglePresent, fieldFlags);
-                wrapSizer->Add(accumulatedEnergyPresent, fieldFlags);
-                wrapSizer->Add(offsetCompensationIndicator, fieldFlags);
-                staticBoxSizer->Add(wrapSizer, groupBoxInnerFlags);
-            }
-            sizer->Add(staticBoxSizer, groupBoxFlags);
-        }
-
-        {
-            wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-            flexGridSizer->AddGrowableCol(0);
-            flexGridSizer->AddGrowableCol(1);
-
-            {
-                wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Instantaneous power");
-                staticBoxSizer->Add(instantaneousPower, fieldFlags);
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Pedal power balance");
-                staticBoxSizer->Add(pedalPowerBalance, fieldFlags);
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Accumulated torque");
-                {
-                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Accumulated torque"), fieldFlags);
-                    flexGridSizer->Add(accumulatedTorque, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Instantaneous torque"), fieldFlags);
-                    flexGridSizer->Add(torquePanel, fieldFlags);
-                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
-                }
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Accumulated energy");
-                staticBoxSizer->Add(accumulatedEnergy, fieldFlags);
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Wheel revolution data");
-                {
-                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Cumulative wheel revolutions"), fieldFlags);
-                    flexGridSizer->Add(cumulativeWheelRevolutions, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Last wheel event time"), fieldFlags);
-                    flexGridSizer->Add(lastWheelEventTime, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Wheel speed"), fieldFlags);
-                    flexGridSizer->Add(wheelSpeedPanel, fieldFlags);
-                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
-                }
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Crank revolution data");
-                {
-                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Cumulative crank revolutions"), fieldFlags);
-                    flexGridSizer->Add(cumulativeCrankRevolutions, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Last crank event time"), fieldFlags);
-                    flexGridSizer->Add(lastCrankEventTime, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Cadence"), fieldFlags);
-                    //crankRevolutionSizerInnerSizer->Add(cadence, fieldFlags);
-                    flexGridSizer->Add(cadencePanel, fieldFlags);
-                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
-                }
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Extreme force magnitudes");
-                {
-                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Maximum force magnitude"), fieldFlags);
-                    flexGridSizer->Add(maximumForceMagnitude, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Minimum force magnitude"), fieldFlags);
-                    flexGridSizer->Add(minimumForceMagnitude, fieldFlags);
-                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
-                }
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Extreme torque magnitudes");
-                {
-                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Maximum torque magnitude"), fieldFlags);
-                    flexGridSizer->Add(maximumTorqueMagnitude, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Minimum torque magnitude"), fieldFlags);
-                    flexGridSizer->Add(minimumTorqueMagnitude, fieldFlags);
-                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
-                }
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Extreme angles");
-                {
-                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Maximum angle"), fieldFlags);
-                    flexGridSizer->Add(maximumAngle, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Minimum angle"), fieldFlags);
-                    flexGridSizer->Add(minimumAngle, fieldFlags);
-                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
-                }
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            {
-                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, measurement, "Dead spot angles");
-                {
-                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Top dead spot angle"), fieldFlags);
-                    flexGridSizer->Add(topDeadSpotAngle, fieldFlags);
-                    flexGridSizer->Add(new wxStaticText(measurement, wxID_ANY, "Bottom dead spot angle"), fieldFlags);
-                    flexGridSizer->Add(bottomDeadSpotAngle, fieldFlags);
-                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
-                }
-                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
-            }
-
-            sizer->Add(flexGridSizer, gridFlags);
-        }
-
-        sizer->AddStretchSpacer();
-
-        {
-            wxBoxSizer *boxSizer = new wxBoxSizer(wxHORIZONTAL);
-            boxSizer->Add(loggingMeasurement, fieldFlags);
-            boxSizer->Add(logFileMeasurement, fieldFlags);
-            boxSizer->AddStretchSpacer();
-            boxSizer->Add(notifyMeasurement, fieldFlags);
-            boxSizer->Add(broadcastMeasurement, rightFlags);
-            sizer->Add(boxSizer, groupBoxInnerFlags);
-        }
-
-        measurement->SetSizerAndFit(sizer);
-        measurement->PostSizeEvent();        // wxWrapSizer needs a resize to layout correctly
-    }
-
-
-    // Sensor location page
-    wxButton *requestSensorLocation = new wxButton(sensor_location, wxID_ANY, "Get sensor location");
-    sensorLocation = new wxStaticText(sensor_location, wxID_ANY, "-");
-
-    // Bind the controls
-    requestSensorLocation->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
-        SendCommand("Get sensor location\n");
-    });
-
-    // Layout the page
-    {
-        wxFlexGridSizer *sizer = new wxFlexGridSizer(2, 0, 0);
-        sizer->Add(requestSensorLocation, fieldFlags);
-        sizer->Add(sensorLocation, fieldFlags);
-
-        sensor_location->SetSizerAndFit(sizer);
-    }
-
-    // Cycling power control point
-    wxTextCtrl *cumulative = new wxTextCtrl(control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_DIGITS));
-    wxButton *supportedLocations = new wxButton(control, wxID_ANY, "Get supported sensor locations");
-    location = new wxComboBox(control, wxID_ANY);
-    crankLength = new wxTextCtrl(control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_NUMERIC));
-    wxButton *requestCrankLength = new wxButton(control, wxID_ANY, "Get crank length");
-    chainLength = new wxTextCtrl(control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_DIGITS));
-    wxButton *requestChainLength = new wxButton(control, wxID_ANY, "Get chain length");
-    chainWeight = new wxTextCtrl(control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_DIGITS));
-    wxButton *requestChainWeight = new wxButton(control, wxID_ANY, "Get chain weight");
-    span = new wxTextCtrl(control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_DIGITS));
-    wxButton *requestSpan = new wxButton(control, wxID_ANY, "Get span");
-    wxButton *offsetCompensation = new wxButton(control, wxID_ANY, "Start offset compensation");
-    offsetCompensationValue = new wxStaticText(control, wxID_ANY, "-");
-    wxButton *maskMeasurement = new wxButton(control, wxID_ANY, "Mask cycling power measurement characteristic content");
-    pedalPowerBalanceMask   = new wxCheckBox(control, wxID_ANY, "Balance");
-    accumulatedTorqueMask   = new wxCheckBox(control, wxID_ANY, "Accumulated torque");
-    wheelRevolutionDataMask = new wxCheckBox(control, wxID_ANY, "Wheel revolution");
-    crankRevolutionDataMask = new wxCheckBox(control, wxID_ANY, "Crank revolution");
-    extremeMagnitudesMask   = new wxCheckBox(control, wxID_ANY, "Extreme magnitudes");
-    extremeAnglesMask       = new wxCheckBox(control, wxID_ANY, "Extreme angles");
-    topDeadSpotAngleMask    = new wxCheckBox(control, wxID_ANY, "Top dead spot angle");
-    bottomDeadSpotAngleMask = new wxCheckBox(control, wxID_ANY, "Bottom dead spot angle");
-    accumulatedEnergyMask   = new wxCheckBox(control, wxID_ANY, "Accumulated energy");
-    samplingRate = new wxStaticText(control, wxID_ANY, "-");
-    wxButton *requestSamplingRate = new wxButton(control, wxID_ANY, "Get sampling rate");
-    calibrationDate = new wxStaticText(control, wxID_ANY, "-");
-    wxButton *requestCalibrationDate = new wxButton(control, wxID_ANY, "Get factory calibration date");
-    wxButton *enhancedOffsetCompensation = new wxButton(control, wxID_ANY, "Start enhanced offset compensation");
-    enhancedOffsetCompensationValue = new wxStaticText(control, wxID_ANY, "-");
+    SetupSensorLocationPage(this, fieldFlags);
+    SetupControlPointPage(this);
 
     // Bind the controls
     cumulative->Bind(wxEVT_TEXT_ENTER, [&](wxCommandEvent & evt) {
@@ -532,6 +181,8 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     enhancedOffsetCompensation->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
         SendCommand("Start enhanced offset compensation\n");
     });
+
+    //SetupBindControls(this);
 
 
     // Layout the page
@@ -1602,30 +1253,16 @@ IC2Frame::IC2Frame() : wxFrame(NULL, wxID_ANY,  wxT("Verve IC2 Diagnostic Tool")
     disconnectCountdownLabel = new wxStaticText(page12, wxID_ANY, "Disconnect in: 60s");
     mainSizer->Add(disconnectCountdownLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
     countdownTimer = new wxTimer(this ,wxID_ANY);
-    countdownSeconds = 60;
+    countdownSeconds = 10;
     countdownTimer->Start(1000);
 
-
-    // In your IC2Frame constructor, after creating the main panel/layout
-    // wxPanel* overlayPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(200, 30));
-    // overlayPanel->SetBackgroundColour(wxColour(0, 0, 0, 128)); // Semi-transparent black
-    // overlayPanel->SetPosition(wxPoint(10, 10)); // Top-left corner
-    //
-    // wxStaticText* overlayText = new wxStaticText(overlayPanel, wxID_ANY, "Overlay Message", wxPoint(5, 5));
-    // overlayText->SetForegroundColour(*wxWHITE);
-
-//     overlayPanel = new DraggableOverlayPanel(this, wxID_ANY, wxPoint(10, 10), wxSize(200, 30));
-//     overlayText = new wxStaticText(overlayPanel, wxID_ANY, "Overlay Message", wxPoint(5, 5));
-//     overlayText->SetForegroundColour(*wxWHITE);
-//
     auto* overlay = new DraggableOverlayPanel(devices, wxID_ANY, wxPoint(10, 10), wxSize(200, 30));
-    auto* overlayText = new wxStaticText(overlay, wxID_ANY, "Overlay Message", wxPoint(5, 5));
+    overlayText = new wxStaticText(overlay, wxID_ANY, "Overlay Message", wxPoint(5, 5));
     overlayText->SetForegroundColour(*wxWHITE);
+    overlay->Raise();
 }
 
-
-
-//TODO - title block if this works
+//TODO - title block
 void IC2Frame::SetOverlayText(const wxString& text) {
     if (overlayText) {
         overlayText->SetLabel(text);

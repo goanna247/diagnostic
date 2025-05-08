@@ -307,6 +307,65 @@ void SetupFeaturesPage(IC2Frame* frame, wxSizerFlags& fieldFlags, wxSizerFlags& 
     frame->features->SetSizerAndFit(sizer);
 }
 
+void setupFunction(IC2Frame* frame, wxSizerFlags& fieldFlags, wxSizerFlags& bottomRightFlags) {
+
+    // Bind the controls
+    frame->refreshFeatures->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Refresh features\n");
+    });
+
+    {
+        wxFlexGridSizer *sizer = new wxFlexGridSizer(2, 0, 0);
+        sizer->AddGrowableCol(1);
+        sizer->AddGrowableRow(20);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Pedal power balance supported"), fieldFlags);
+        sizer->Add(frame->balanceFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Accumulated torque supported"), fieldFlags);
+        sizer->Add(frame->torqueFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Wheel revolution data supported"), fieldFlags);
+        sizer->Add(frame->wheelRevolutionFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Crank revolution data supported"), fieldFlags);
+        sizer->Add(frame->crankRevolutionFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Extreme magnitudes supported"), fieldFlags);
+        sizer->Add(frame->magnitudesFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Extreme angles supported"), fieldFlags);
+        sizer->Add(frame->anglesFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Top and bottom dead spot angles supported"), fieldFlags);
+        sizer->Add(frame->deadSpotsFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Accumulated energy supported"), fieldFlags);
+        sizer->Add(frame->energyFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Offset compensation indicator supported"), fieldFlags);
+        sizer->Add(frame->compensationIndicatorFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Offset compensation supported"), fieldFlags);
+        sizer->Add(frame->compensationFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Cycling power measurement characteristic content masking supported"), fieldFlags);
+        sizer->Add(frame->maskingFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Multiple sensor locations supported"), fieldFlags);
+        sizer->Add(frame->locationsFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Crank length adjustment supported"), fieldFlags);
+        sizer->Add(frame->crankLengthFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Chain length adjustment supported"), fieldFlags);
+        sizer->Add(frame->chainLengthFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Chain weight adjustment supported"), fieldFlags);
+        sizer->Add(frame->chainWeightFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Span length adjustment supported"), fieldFlags);
+        sizer->Add(frame->spanFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Sensor measurement context"), fieldFlags);
+        sizer->Add(frame->contextFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Instantaneous measurement direction supported"), fieldFlags);
+        sizer->Add(frame->directionFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Factory calibration date supported"), fieldFlags);
+        sizer->Add(frame->dateFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Enhanced offset compensation procedure supported"), fieldFlags);
+        sizer->Add(frame->enhancedCompensationFeature, fieldFlags);
+        sizer->Add(new wxStaticText(frame->features, wxID_ANY, "Distributed system support"), fieldFlags);
+        sizer->Add(frame->distributedFeature, fieldFlags);
+        sizer->AddStretchSpacer();
+        sizer->Add(frame->refreshFeatures, bottomRightFlags);
+        frame->features->SetSizerAndFit(sizer);
+    }
+}
+
 
 
 
@@ -314,14 +373,290 @@ void SetupFeaturesPage(IC2Frame* frame, wxSizerFlags& fieldFlags, wxSizerFlags& 
 //
 // -------------------------------------------------------------------------------------------------
 void SetupMeasurementPage(IC2Frame* frame) {
+    // Cycling power measurement
+    frame->pedalPowerBalancePresent = new wxCheckBox(frame->measurement, wxID_ANY, "Balance: Unknown");
+    //    pedalPowerBalancePresent->Enable(false);
+    frame->accumulatedTorquePresent = new wxCheckBox(frame->measurement, wxID_ANY, "Accumulated torque: Wheel based");
+    //    accumulatedTorquePresent->Enable(false);
+    frame->wheelRevolutionDataPresent = new wxCheckBox(frame->measurement, wxID_ANY, "Wheel revolution data");
+    //    wheelRevolutionDataPresent->Enable(false);
+    frame->crankRevolutionDataPresent = new wxCheckBox(frame->measurement, wxID_ANY, "Crank revolution data");
+    //    crankRevolutionDataPresent->Enable(false);
+    frame->extremeForceMagnitudesPresent = new wxCheckBox(frame->measurement, wxID_ANY, "Extreme force magnitudes");
+    //    extremeForceMagnitudesPresent->Enable(false);
+    frame->extremeTorqueMagnitudesPresent = new wxCheckBox(frame->measurement, wxID_ANY, "Extreme torque magnitudes");
+    //    extremeTorqueMagnitudesPresent->Enable(false);
+    frame->extremeAnglesPresent = new wxCheckBox(frame->measurement, wxID_ANY, "Extreme angles");
+    //    extremeAnglesPresent->Enable(false);
+    frame->topDeadSpotAnglePresent = new wxCheckBox(frame->measurement, wxID_ANY, "Top dead spot angle");
+    //    topDeadSpotAnglePresent->Enable(false);
+    frame->bottomDeadSpotAnglePresent = new wxCheckBox(frame->measurement, wxID_ANY, "Bottom dead spot angle");
+    //    bottomDeadSpotAnglePresent->Enable(false);
+    frame->accumulatedEnergyPresent = new wxCheckBox(frame->measurement, wxID_ANY, "Accumulated energy");
+    //    accumulatedEnergyPresent->Enable(false);
+    frame->offsetCompensationIndicator = new wxCheckBox(frame->measurement, wxID_ANY, "Offset compensation indicator");
+    //    offsetCompensationIndicator->Enable(false);
+    frame->instantaneousPower = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->pedalPowerBalance = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->accumulatedTorque = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->torquePanel = new wxPanel(frame->measurement);
+    frame->torquePanel->SetBackgroundColour(wxColour(wxT("YELLOW")));
+    frame->torque = new wxStaticText(frame->torquePanel, wxID_ANY, "-");
+    frame->torque->SetForegroundColour(wxColour(wxT("RED")));
+    frame->cumulativeWheelRevolutions = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->lastWheelEventTime = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->wheelSpeedPanel = new wxPanel(frame->measurement);
+    frame->wheelSpeedPanel->SetBackgroundColour(wxColour(wxT("YELLOW")));
+    frame->wheelSpeed = new wxStaticText(frame->wheelSpeedPanel, wxID_ANY, "-");
+    frame->wheelSpeed->SetForegroundColour(wxColour(wxT("RED")));
+    frame->cumulativeCrankRevolutions = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->lastCrankEventTime = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->cadencePanel = new wxPanel(frame->measurement);
+    frame->cadencePanel->SetBackgroundColour(wxColour(wxT("YELLOW")));
+    frame->cadence = new wxStaticText(frame->cadencePanel, wxID_ANY, "-");
+    frame->cadence->SetForegroundColour(wxColour(wxT("RED")));
+    frame->maximumForceMagnitude = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->minimumForceMagnitude = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->maximumTorqueMagnitude = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->minimumTorqueMagnitude = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->maximumAngle = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->minimumAngle = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->topDeadSpotAngle = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->bottomDeadSpotAngle = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->accumulatedEnergy = new wxStaticText(frame->measurement, wxID_ANY, "-");
+    frame->notifyMeasurement = new wxToggleButton(frame->measurement, wxID_ANY, "Notify");
+    frame->broadcastMeasurement = new wxToggleButton(frame->measurement, wxID_ANY, "Broadcast");
+    frame->loggingMeasurement = new wxCheckBox(frame->measurement, wxID_ANY, "/dev/null");
+    frame->logFileMeasurement = new wxButton(frame->measurement, wxID_ANY, "...", wxDefaultPosition, wxSize(50, 20));
+}
+
+void bindControls(IC2Frame* frame) {
+    // Bind the controls
+    frame->notifyMeasurement->Bind(wxEVT_TOGGLEBUTTON, [&](wxCommandEvent & evt) {
+        switch (evt.GetInt()) {
+            case TRUE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
+                frame->SendCommand("Notify measurement on\n");
+                break;
+            case FALSE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Notify");
+                frame->SendCommand("Notify measurement off\n");
+                break;
+        }
+    });
+    frame->broadcastMeasurement->Bind(wxEVT_TOGGLEBUTTON, [&](wxCommandEvent & evt) {
+        switch (evt.GetInt()) {
+            case TRUE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Stop");
+                frame->SendCommand("Broadcast measurement on\n");
+                break;
+            case FALSE:
+                ((wxToggleButton *) evt.GetEventObject())->SetLabel("Broadcast");
+                frame->SendCommand("Broadcast measurement off\n");
+                break;
+        }
+    });
+    frame->logFileMeasurement->Bind(wxEVT_BUTTON, &IC2Frame::LogFileName, frame, wxID_ANY, wxID_ANY, new IC2Frame::FileDialogParameters("measurement.log", frame->loggingMeasurement));
+    frame->loggingMeasurement->Bind(wxEVT_CHECKBOX,
+                             [&](wxCommandEvent & evt) {
+                                 wxCheckBox *checkBox = (wxCheckBox *) evt.GetEventObject();
+                                 if (checkBox->IsChecked()) {
+                                     //            logMeasurement.Create(checkBox->GetLabel(), true);
+                                     frame->logMeasurement.Open(checkBox->GetLabel(), wxFile::write);
+                                 } else {
+                                     frame->logMeasurement.Close();
+                                 }
+                             });
 
 }
+
+void layoutPage(IC2Frame* frame, wxSizerFlags& fieldFlags, wxSizerFlags& groupBoxFlags, wxSizerFlags& groupBoxInnerFlags, wxSizerFlags& gridFlags, wxSizerFlags& rightFlags) {
+    // Layout the page
+    {
+        wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+
+        {
+            wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Flags");
+            {
+                wxWrapSizer *wrapSizer = new wxWrapSizer(wxVERTICAL);
+                wrapSizer->Add(frame->pedalPowerBalancePresent, fieldFlags);
+                wrapSizer->Add(frame->accumulatedTorquePresent, fieldFlags);
+                wrapSizer->Add(frame->wheelRevolutionDataPresent, fieldFlags);
+                wrapSizer->Add(frame->crankRevolutionDataPresent, fieldFlags);
+                wrapSizer->Add(frame->extremeForceMagnitudesPresent, fieldFlags);
+                wrapSizer->Add(frame->extremeTorqueMagnitudesPresent, fieldFlags);
+                wrapSizer->Add(frame->extremeAnglesPresent, fieldFlags);
+                wrapSizer->Add(frame->topDeadSpotAnglePresent, fieldFlags);
+                wrapSizer->Add(frame->bottomDeadSpotAnglePresent, fieldFlags);
+                wrapSizer->Add(frame->accumulatedEnergyPresent, fieldFlags);
+                wrapSizer->Add(frame->offsetCompensationIndicator, fieldFlags);
+                staticBoxSizer->Add(wrapSizer, groupBoxInnerFlags);
+            }
+            sizer->Add(staticBoxSizer, groupBoxFlags);
+        }
+
+        {
+            wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
+            flexGridSizer->AddGrowableCol(0);
+            flexGridSizer->AddGrowableCol(1);
+
+            {
+                wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Instantaneous power");
+                staticBoxSizer->Add(frame->instantaneousPower, fieldFlags);
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Pedal power balance");
+                staticBoxSizer->Add(frame->pedalPowerBalance, fieldFlags);
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Accumulated torque");
+                {
+                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Accumulated torque"), fieldFlags);
+                    flexGridSizer->Add(frame->accumulatedTorque, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Instantaneous torque"), fieldFlags);
+                    flexGridSizer->Add(frame->torquePanel, fieldFlags);
+                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
+                }
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer  *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Accumulated energy");
+                staticBoxSizer->Add(frame->accumulatedEnergy, fieldFlags);
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Wheel revolution data");
+                {
+                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Cumulative wheel revolutions"), fieldFlags);
+                    flexGridSizer->Add(frame->cumulativeWheelRevolutions, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Last wheel event time"), fieldFlags);
+                    flexGridSizer->Add(frame->lastWheelEventTime, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Wheel speed"), fieldFlags);
+                    flexGridSizer->Add(frame->wheelSpeedPanel, fieldFlags);
+                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
+                }
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Crank revolution data");
+                {
+                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Cumulative crank revolutions"), fieldFlags);
+                    flexGridSizer->Add(frame->cumulativeCrankRevolutions, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Last crank event time"), fieldFlags);
+                    flexGridSizer->Add(frame->lastCrankEventTime, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Cadence"), fieldFlags);
+                    //crankRevolutionSizerInnerSizer->Add(cadence, fieldFlags);
+                    flexGridSizer->Add(frame->cadencePanel, fieldFlags);
+                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
+                }
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Extreme force magnitudes");
+                {
+                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Maximum force magnitude"), fieldFlags);
+                    flexGridSizer->Add(frame->maximumForceMagnitude, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Minimum force magnitude"), fieldFlags);
+                    flexGridSizer->Add(frame->minimumForceMagnitude, fieldFlags);
+                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
+                }
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Extreme torque magnitudes");
+                {
+                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Maximum torque magnitude"), fieldFlags);
+                    flexGridSizer->Add(frame->maximumTorqueMagnitude, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Minimum torque magnitude"), fieldFlags);
+                    flexGridSizer->Add(frame->minimumTorqueMagnitude, fieldFlags);
+                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
+                }
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Extreme angles");
+                {
+                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Maximum angle"), fieldFlags);
+                    flexGridSizer->Add(frame->maximumAngle, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Minimum angle"), fieldFlags);
+                    flexGridSizer->Add(frame->minimumAngle, fieldFlags);
+                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
+                }
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            {
+                wxStaticBoxSizer *staticBoxSizer = new wxStaticBoxSizer(wxVERTICAL, frame->measurement, "Dead spot angles");
+                {
+                    wxFlexGridSizer *flexGridSizer = new wxFlexGridSizer(2, 0, 0);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Top dead spot angle"), fieldFlags);
+                    flexGridSizer->Add(frame->topDeadSpotAngle, fieldFlags);
+                    flexGridSizer->Add(new wxStaticText(frame->measurement, wxID_ANY, "Bottom dead spot angle"), fieldFlags);
+                    flexGridSizer->Add(frame->bottomDeadSpotAngle, fieldFlags);
+                    staticBoxSizer->Add(flexGridSizer, groupBoxInnerFlags);
+                }
+                flexGridSizer->Add(staticBoxSizer, groupBoxFlags);
+            }
+
+            sizer->Add(flexGridSizer, gridFlags);
+        }
+
+        sizer->AddStretchSpacer();
+
+        {
+            wxBoxSizer *boxSizer = new wxBoxSizer(wxHORIZONTAL);
+            boxSizer->Add(frame->loggingMeasurement, fieldFlags);
+            boxSizer->Add(frame->logFileMeasurement, fieldFlags);
+            boxSizer->AddStretchSpacer();
+            boxSizer->Add(frame->notifyMeasurement, fieldFlags);
+            boxSizer->Add(frame->broadcastMeasurement, rightFlags);
+            sizer->Add(boxSizer, groupBoxInnerFlags);
+        }
+
+        frame->measurement->SetSizerAndFit(sizer);
+        frame->measurement->PostSizeEvent();        // wxWrapSizer needs a resize to layout correctly
+    }
+}
+
 
 
 // -------------------------------------------------------------------------------------------------
 //
 // -------------------------------------------------------------------------------------------------
-void SetupSensorLocationPage(IC2Frame* frame) {
+void SetupSensorLocationPage(IC2Frame* frame, wxSizerFlags& fieldFlags) {
+    // Sensor location page
+    wxButton *requestSensorLocation = new wxButton(frame->sensor_location, wxID_ANY, "Get sensor location");
+    frame->sensorLocation = new wxStaticText(frame->sensor_location, wxID_ANY, "-");
+
+    // Bind the controls
+    requestSensorLocation->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Get sensor location\n");
+    });
+
+    // Layout the page
+    {
+        wxFlexGridSizer *sizer = new wxFlexGridSizer(2, 0, 0);
+        sizer->Add(requestSensorLocation, fieldFlags);
+        sizer->Add(frame->sensorLocation, fieldFlags);
+
+        frame->sensor_location->SetSizerAndFit(sizer);
+    }
 
 }
 
@@ -331,6 +666,87 @@ void SetupSensorLocationPage(IC2Frame* frame) {
 // -------------------------------------------------------------------------------------------------
 void SetupControlPointPage(IC2Frame* frame) {
 
+    // Cycling power control point
+    frame->cumulative = new wxTextCtrl(frame->control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_DIGITS));
+    frame->supportedLocations = new wxButton(frame->control, wxID_ANY, "Get supported sensor locations");
+    frame->location = new wxComboBox(frame->control, wxID_ANY);
+    frame->crankLength = new wxTextCtrl(frame->control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_NUMERIC));
+    frame->requestCrankLength = new wxButton(frame->control, wxID_ANY, "Get crank length");
+    frame->chainLength = new wxTextCtrl(frame->control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_DIGITS));
+    frame->requestChainLength = new wxButton(frame->control, wxID_ANY, "Get chain length");
+    frame->chainWeight = new wxTextCtrl(frame->control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_DIGITS));
+    frame->requestChainWeight = new wxButton(frame->control, wxID_ANY, "Get chain weight");
+    frame->span = new wxTextCtrl(frame->control, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, wxTextValidator(wxFILTER_DIGITS));
+    frame->requestSpan = new wxButton(frame->control, wxID_ANY, "Get span");
+    frame->offsetCompensation = new wxButton(frame->control, wxID_ANY, "Start offset compensation");
+    frame->offsetCompensationValue = new wxStaticText(frame->control, wxID_ANY, "-");
+    frame->maskMeasurement = new wxButton(frame->control, wxID_ANY, "Mask cycling power measurement characteristic content");
+    frame->pedalPowerBalanceMask   = new wxCheckBox(frame->control, wxID_ANY, "Balance");
+    frame->accumulatedTorqueMask   = new wxCheckBox(frame->control, wxID_ANY, "Accumulated torque");
+    frame->wheelRevolutionDataMask = new wxCheckBox(frame->control, wxID_ANY, "Wheel revolution");
+    frame->crankRevolutionDataMask = new wxCheckBox(frame->control, wxID_ANY, "Crank revolution");
+    frame->extremeMagnitudesMask   = new wxCheckBox(frame->control, wxID_ANY, "Extreme magnitudes");
+    frame->extremeAnglesMask       = new wxCheckBox(frame->control, wxID_ANY, "Extreme angles");
+    frame->topDeadSpotAngleMask    = new wxCheckBox(frame->control, wxID_ANY, "Top dead spot angle");
+    frame->bottomDeadSpotAngleMask = new wxCheckBox(frame->control, wxID_ANY, "Bottom dead spot angle");
+    frame->accumulatedEnergyMask   = new wxCheckBox(frame->control, wxID_ANY, "Accumulated energy");
+    frame->samplingRate = new wxStaticText(frame->control, wxID_ANY, "-");
+    frame->requestSamplingRate = new wxButton(frame->control, wxID_ANY, "Get sampling rate");
+    frame->calibrationDate = new wxStaticText(frame->control, wxID_ANY, "-");
+    frame->requestCalibrationDate = new wxButton(frame->control, wxID_ANY, "Get factory calibration date");
+    frame->enhancedOffsetCompensation = new wxButton(frame->control, wxID_ANY, "Start enhanced offset compensation");
+    frame->enhancedOffsetCompensationValue = new wxStaticText(frame->control, wxID_ANY, "-");
+
+}
+
+void SetupBindControls(IC2Frame* frame) {
+
+    // Bind the controls
+    frame->cumulative->Bind(wxEVT_TEXT_ENTER, [&](wxCommandEvent & evt) {
+        frame->SendCommand(wxString().Format("Set cumulative value %s\n", frame->cumulative->GetValue()));
+    });
+    frame->supportedLocations->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Get supported sensor locations\n");
+    });
+    frame->location->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &IC2Frame::SetSensorLocation, frame);
+    frame->requestCrankLength->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Get crank length\n");
+    });
+    frame->crankLength->Bind(wxEVT_TEXT_ENTER, [&](wxCommandEvent & evt) {
+        frame->SendCommand(wxString().Format("Set crank length %s\n", frame->crankLength->GetValue()));
+    });
+    frame->requestChainLength->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Get chain length\n");
+    });
+    frame->chainLength->Bind(wxEVT_TEXT_ENTER, [&](wxCommandEvent & evt) {
+        frame->SendCommand(wxString().Format("Set chain length %s\n", frame->chainLength->GetValue()));
+    });
+    frame->requestChainWeight->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Get chain weight\n");
+    });
+    frame->chainWeight->Bind(wxEVT_TEXT_ENTER, [&](wxCommandEvent & evt) {
+        frame->SendCommand(wxString().Format("Set chain weight %s\n", frame->chainWeight->GetValue()));
+    });
+    frame->requestSpan->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Get span\n");
+    });
+    frame->span->Bind(wxEVT_TEXT_ENTER, [&](wxCommandEvent & evt) {
+        frame->SendCommand(wxString().Format("Set span %s\n", frame->span->GetValue()));
+    });
+    frame->offsetCompensation->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Start offset compensation\n");
+    });
+    frame->maskMeasurement->Bind(wxEVT_BUTTON, &IC2Frame::MaskMeasurement, frame);
+
+    frame->requestSamplingRate->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Get sampling rate\n");
+    });
+    frame->requestCalibrationDate->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Get factory calibration date\n");
+    });
+    frame->enhancedOffsetCompensation->Bind(wxEVT_BUTTON, [&](wxCommandEvent & evt) {
+        frame->SendCommand("Start enhanced offset compensation\n");
+    });
 }
 
 
